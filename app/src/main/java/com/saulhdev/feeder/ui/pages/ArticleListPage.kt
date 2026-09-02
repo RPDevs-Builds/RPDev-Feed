@@ -304,6 +304,9 @@ fun ArticleListPage(
                                     onRefresh = { syncClient.syncAllFeeds() },
                                     listState = listState,
                                     content = {
+                                        item(key = "hub_dashboard") {
+                                            com.saulhdev.feeder.ui.components.hub.HubDashboardSection()
+                                        }
                                         items(state.articles, key = { it.id }) { item ->
                                             ArticleItem(
                                                 article = item,
