@@ -80,6 +80,10 @@ class OverlayView(val context: Context) :
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        themeHolder = OverlayThemeHolder(this)
+        val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
+        getWindow().setBackgroundDrawable((bgColor and 0x00ffffff).toDrawable())
+
         rootView = View.inflate(
             ContextThemeWrapper(this, R.style.AppTheme),
             R.layout.overlay_layout,
@@ -88,11 +92,6 @@ class OverlayView(val context: Context) :
         val mainContainer = rootView.findViewById<ViewGroup>(R.id.overlay_root)
         AbstractFloatingView.container = mainContainer
         AbstractFloatingView.closeAllOpenViews(context)
-
-        themeHolder = OverlayThemeHolder(this)
-
-        val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
-        getWindow().setBackgroundDrawable((bgColor and 0x00ffffff).toDrawable())
 
         initInsets()
         initRecyclerView()

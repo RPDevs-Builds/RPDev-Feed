@@ -124,26 +124,31 @@ private fun Context.launchWithBalPendingIntent(intent: Intent) {
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     }
 
-    val creatorOptions = buildBalCreatorOptions()
-    val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-    val pendingIntent = PendingIntent.getActivity(
-        this,
-        System.currentTimeMillis().toInt(),
-        targetIntent,
-        flags,
-        creatorOptions
-    )
+    try {
+        val creatorOptions = buildBalCreatorOptions()
+        val flags = PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        val pendingIntent = PendingIntent.getActivity(
+            this,
+            System.currentTimeMillis().toInt(),
+            targetIntent,
+            flags,
+            creatorOptions
+        )
 
-    val senderOptions = buildBalSenderOptions()
-    pendingIntent.send(
-        this,
-        0,
-        null,
-        null,
-        null,
-        null,
-        senderOptions
-    )
+        val senderOptions = buildBalSenderOptions()
+        pendingIntent.send(
+            this,
+            0,
+            null,
+            null,
+            null,
+            null,
+            senderOptions
+        )
+    } catch (e: Exception) {
+        Log.w("Context", "launchWithBalPendingIntent fallback: ${e.message}")
+        startActivity(targetIntent)
+    }
 }
 
 private fun buildBalCreatorOptions(): Bundle? {

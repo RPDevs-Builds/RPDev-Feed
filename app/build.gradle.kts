@@ -27,10 +27,10 @@ android {
 
     defaultConfig {
         applicationId = "com.saulhdev.neofeed"
-        minSdk = 26
+        minSdk = 34
         targetSdk = 37
-        versionCode = 1900
-        versionName = "1.9.0"
+        versionCode = 1000
+        versionName = "1.0.0-alpha"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -97,7 +97,7 @@ androidComponents {
     onVariants { variant ->
         variant.outputs.forEach { output ->
             val versionName = output.versionName.get()
-            output.outputFileName.set("Neo_Feed_${versionName}_${variant.name}.apk")
+            output.outputFileName.set("RPDev_Feed_${versionName}_${variant.name}.apk")
         }
     }
 }

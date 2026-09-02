@@ -154,7 +154,7 @@ fun SourceListPage(
                     floatingActionButton = {
                         ExtendedFloatingActionButton(
                             onClick = {
-                                navController.navigate(NavRoute.SourceAdd)
+                                navController.navigate(NavRoute.SourceAdd())
                             },
                             modifier = Modifier.padding(16.dp),
                             shape = MaterialTheme.shapes.extraLarge

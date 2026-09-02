@@ -86,7 +86,10 @@ fun NavigationManager(
             composable<NavRoute.About> { AboutPage() }
             composable<NavRoute.License> { LicensePage() }
             composable<NavRoute.Changelog> { ChangelogPage() }
-            composable<NavRoute.SourceAdd> { SourceAddPage() }
+            composable<NavRoute.SourceAdd> {
+                val args = it.toRoute<NavRoute.SourceAdd>()
+                SourceAddPage(initialUrl = args.initialUrl)
+            }
             composable<NavRoute.BlockedWords> { BlockedWordsPage() }
             composable<NavRoute.MastodonAdd> { MastodonAddPage() }
             composable<NavRoute.MastodonCallback>(
@@ -151,7 +154,7 @@ open class NavRoute {
     data object About : NavRoute()
 
     @Serializable
-    data object SourceAdd : NavRoute()
+    data class SourceAdd(val initialUrl: String = "") : NavRoute()
 
     @Serializable
     data object BlockedWords : NavRoute()

@@ -76,6 +76,7 @@ import java.net.URL
 
 @Composable
 fun SourceAddPage(
+    initialUrl: String = "",
     searchFeedViewModel: SearchFeedViewModel = koinNeoViewModel(),
     sourcesViewModel: SourceListViewModel = koinNeoViewModel(),
 ) {
@@ -105,7 +106,7 @@ fun SourceAddPage(
         var errors by rememberSaveable {
             mutableStateOf(listOf<SearchResult>())
         }
-        var feedUrl by remember { mutableStateOf("") }
+        var feedUrl by remember { mutableStateOf(initialUrl) }
 
         Column(
             modifier = Modifier.padding(

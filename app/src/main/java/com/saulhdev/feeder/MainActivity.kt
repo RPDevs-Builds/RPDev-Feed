@@ -30,6 +30,7 @@ import androidx.work.WorkManager
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.manager.sync.FeedSyncer
 import com.saulhdev.feeder.ui.navigation.NAV_BASE
+import com.saulhdev.feeder.ui.navigation.NavRoute
 import com.saulhdev.feeder.ui.navigation.NavigationManager
 import com.saulhdev.feeder.ui.theme.AppTheme
 import com.saulhdev.feeder.utils.extensions.isDarkTheme
@@ -75,6 +76,15 @@ class MainActivity : ComponentActivity() {
 
     private fun handleDeepLink(intent: Intent?) {
         if (intent == null) return
+        if (intent.action == Intent.ACTION_SEND && intent.type == "text/plain") {
+            val sharedText = intent.getStringExtra(Intent.EXTRA_TEXT) ?: ""
+            val urlRegex = Regex("""(https?://[^\s]+)""")
+            val matchedUrl = urlRegex.find(sharedText)?.value ?: sharedText.trim()
+            if (matchedUrl.isNotBlank() && ::navController.isInitialized) {
+                navController.navigate(NavRoute.SourceAdd(initialUrl = matchedUrl))
+                return
+            }
+        }
         if (::navController.isInitialized) {
             navController.handleDeepLink(intent)
         }
