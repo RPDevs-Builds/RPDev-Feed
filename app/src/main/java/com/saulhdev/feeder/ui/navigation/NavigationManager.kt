@@ -102,6 +102,9 @@ fun NavigationManager(
                 val args = it.toRoute<NavRoute.MastodonCallback>()
                 MastodonCallbackPage(args.code, args.state)
             }
+            composable<NavRoute.Plugins> {
+                com.saulhdev.feeder.ui.pages.PluginsPage()
+            }
             composable<NavRoute.WebView>(
                 deepLinks = listOf(navDeepLink { uriPattern = "$NAV_BASE${Routes.WEB_VIEW}/{url}" })
             ) {
@@ -125,6 +128,7 @@ object Routes {
     const val SETTINGS = "settings"
     const val WEB_VIEW = "web_view"
     const val ARTICLE_VIEW = "article_page"
+    const val PLUGINS = "plugins"
 }
 
 sealed class NavItem(
@@ -152,6 +156,9 @@ sealed class NavItem(
 open class NavRoute {
     @Serializable
     data object About : NavRoute()
+
+    @Serializable
+    data object Plugins : NavRoute()
 
     @Serializable
     data class SourceAdd(val initialUrl: String = "") : NavRoute()

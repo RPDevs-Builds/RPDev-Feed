@@ -24,6 +24,7 @@ import android.provider.Settings
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
@@ -98,6 +99,44 @@ fun PreferencesPage(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item(key = "hub_plugins_card") {
+                androidx.compose.material3.Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 4.dp),
+                    shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = androidx.compose.material3.MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                    )
+                ) {
+                    androidx.compose.foundation.layout.Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp)
+                    ) {
+                        androidx.compose.material3.Text(
+                            text = "🔌 Hub Plugins & Context Modules",
+                            style = androidx.compose.material3.MaterialTheme.typography.titleMedium,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer
+                        )
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
+                        androidx.compose.material3.Text(
+                            text = "Configure GitHub Pulse, Privacy Weather, Calendar Agenda, Hardware Telemetry, and Custom REST JSON endpoints.",
+                            style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
+                            color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
+                        )
+                        androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(12.dp))
+                        val navController = com.saulhdev.feeder.ui.navigation.LocalNavController.current
+                        androidx.compose.material3.Button(
+                            onClick = { navController.navigate(com.saulhdev.feeder.ui.navigation.NavRoute.Plugins) },
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            androidx.compose.material3.Text("Manage Plugins & Cards")
+                        }
+                    }
+                }
+            }
             item(key = R.string.title_service) {
                 PreferenceGroup(
                     stringResource(id = R.string.title_service),
