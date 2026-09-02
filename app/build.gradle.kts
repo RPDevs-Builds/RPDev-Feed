@@ -29,8 +29,8 @@ android {
         applicationId = "com.saulhdev.neofeed"
         minSdk = 34
         targetSdk = 37
-        versionCode = 1000
-        versionName = "1.0.0-alpha"
+        versionCode = 1001
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true
@@ -47,6 +47,7 @@ android {
         release {
             isMinifyEnabled = true
             isShrinkResources = true
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"

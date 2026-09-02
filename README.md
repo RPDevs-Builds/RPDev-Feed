@@ -1,53 +1,58 @@
 <h1 align="center">
-  <img src="fastlane/metadata/android/en-US/images/icon.png" alt="Neo Store's icon" width="192" height="192"/>
+  <img src="fastlane/metadata/android/en-US/images/icon.png" alt="RPDev Feed Icon" width="128" height="128"/>
   <br>
-  Neo Feed
-  <a href="https://shields.rbtlog.dev/com.machiav3lli.fdroid">
-    <img alt="Reproducible build badge" src="https://shields.rbtlog.dev/simple/com.saulhdev.neofeed?style=flat&labelColor=A8F8A5&color=98E796"/>
-  </a>
+  RPDev Feed
 </h1>
 
-<p align="center"><strong>Custom Google Discover Feed replacement for launchers!</strong></p>
+<p align="center"><strong>Modern Privacy-First Context Hub &amp; Discover Feed Companion for Android Launchers</strong></p>
 
 <div align="center">
 
-[![GitHub repo stars](https://img.shields.io/github/stars/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/stargazers)
-[![Build Status](https://img.shields.io/github/actions/workflow/status/NeoApplications/Neo-Feed/android.yml?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/actions?query=workflow%3A%22Omega+Feeder+CI%22+event%3Apush)
-[![GitHub License](https://img.shields.io/github/license/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/blob/main/LICENSE)
-[![GitHub All Releases](https://img.shields.io/github/downloads/NeoApplications/Neo-Feed/total.svg?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/releases/)
-[![GitHub release](https://img.shields.io/github/v/release/NeoApplications/Neo-Feed?style=flat&labelColor=DDBBFF&color=6650A4)](https://github.com/NeoApplications/Neo-Feed/releases/latest)
+[![Latest Release](https://img.shields.io/github/v/release/RPDevs-Builds/RPDev-Feed?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/releases/latest)
+[![Build Status](https://img.shields.io/github/actions/workflow/status/RPDevs-Builds/RPDev-Feed/android.yml?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/actions/workflows/android.yml)
+[![GitHub License](https://img.shields.io/github/license/RPDevs-Builds/RPDev-Feed?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/blob/main/LICENSE)
+[![GitHub Downloads](https://img.shields.io/github/downloads/RPDevs-Builds/RPDev-Feed/total.svg?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/releases/)
 
 </div>
 
-<div align="center">
+---
 
-[<img src="get_iod.svg" alt="Get it on IzzyOnDroid" width="24%" align="center">](https://apt.izzysoft.de/fdroid/index/apk/com.saulhdev.neofeed)
-[<img src="get_codeberg.svg" alt="Get it on Codeberg" width="24%" align="center">](https://codeberg.org/NeoApplications/Neo-Feed/releases)
-[<img src="get_github.svg" alt="Get it on GitHub" width="24%" align="center">](https://github.com/NeoApplications/Neo-Feed/releases)
+## 📖 Overview
 
-</div>
+**RPDev Feed** is a privacy-first, lightweight companion feed and context hub engine for **RPDev Launcher**, Lawnchair, and other modern Android launchers. It decouples resource-intensive context intelligence (weather, agenda, sensors, push hooks, and news) from the core launcher, keeping the home screen ultra-fast.
 
-[![Neo Applications Banner](neo_banner.png)](https://github.com/NeoApplications)
+---
 
-## Screenshots :framed_picture:
+## ✨ Key Features
 
-### Neo Launcher integration, local reader and feeds customization
+### 🌦️ Zero-Telemetry Privacy Weather (Open-Meteo)
+- **Zero API Keys Required**: Fetches live temperature, weather condition codes (WMO), apparent temperature, humidity, wind speeds, and hourly forecast tracks directly from Open-Meteo.
+- **Privacy-First**: No location tracking or telemetry sent to third parties.
 
-| <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/01.png" alt="" width="330" align="center"> | <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/02.png" alt="" width="330" align="center"> | <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/03.png" alt="" width="330" align="center"> |
-|:---------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------:|:---------------------------------------------------------------------------------------------------------------------:|
+### 📅 On-Device Calendar Agenda Engine
+- **Next 24-Hour Agenda**: Queries local Android `CalendarContract` provider to display upcoming meetings, locations, and time chips.
+- **One-Tap Event Action**: Tap any event card to open your device calendar app directly.
 
-### Supports wide screens like tablets and TVs
+### 🔋 Real-Time Hardware & Battery Telemetry
+- **Battery Health & Charge Power**: Live wattage, charging state, battery voltage, temperature, and current flow.
+- **System Memory & Storage Gauges**: Real-time internal storage utilization and available RAM pressure indicators.
 
-| <img title="" src="fastlane/metadata/android/en-US/images/phoneScreenshots/04.png" alt="" width="1000" align="center"> |
-|:----------------------------------------------------------------------------------------------------------------------:|
+### 📡 Broadcast Push & Custom REST Ingestion
+- **Live Broadcast Receiver**: Send intents (`iamrp.dev.feed.ACTION_POST_CARD`) from Tasker, Termux, or Automate to inject cards dynamically into your feed overlay.
+- **Custom REST Polling**: Integrate Home Assistant, Uptime Kuma, and Gotify alerts into custom feed cards.
 
-### Supported launchers
+### 📰 RSS, Atom & JSON Feed Reader
+- **Multi-Format Ingestion**: Ingest RSS, Atom, and JSON Feed v1.1 channels with offline caching and read-it-later bookmarking.
+- **Adaptive Layouts**: Full support for phones, foldable tablets, and landscape desktop mode.
 
-Any launcher with custom feed provider support. For example:
+---
 
+## 📱 Supported Launchers
+
+- **RPDev Launcher (Recommended)**
 - Neo Launcher
-- LawnChair
-- Shade Launcher
+- Lawnchair
+- Shade Launcher / Smart Launcher (via Feed Bridge)
 
 ## Community :speech_balloon:
 

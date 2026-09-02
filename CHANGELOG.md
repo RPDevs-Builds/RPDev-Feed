@@ -1,12 +1,27 @@
 CHANGELOG
 =========
 
-1.9.0 (09.11.2025) +200 Commits & +30 Translations
+1.0.1 (02.09.2026) - Decoupled Powerhouse Hub Release
 ------------
 
-### Function
+### Function & Context Engines
 
-- Add: Options to export/import bookmarked articles
+- Add: Open-Meteo zero-API privacy weather engine (`OpenMeteoClient`) providing real-time temperature, humidity, wind, and hourly forecasts without tracking.
+- Add: Android Calendar Provider integration (`CalendarProviderHelper`) querying upcoming 24-hour agenda with one-tap event launches.
+- Add: Real-time hardware telemetry (`DeviceSensorsHelper`) monitoring battery percentage, charging wattage/plug type, voltage, temperature, internal storage, and RAM memory pressure.
+- Add: Broadcast push card receiver (`FeedCardPushReceiver`) enabling dynamic card injection into the feed via `iamrp.dev.feed.ACTION_POST_CARD` for Tasker/Termux/Automate.
+- Add: Custom REST endpoint poller (`CustomRestCardSource`) for Home Assistant, Gotify, and local IoT card ingestion.
+
+### UI/UX
+
+- Add: Jetpack Compose Material 3 Context Hub Cards (`WeatherHubCard`, `CalendarHubCard`, `HardwareSensorsCard`, `HubDashboardSection`) embedded at the top of the feed list.
+- Add: Unit toggle (°C / °F) and interactive event pills.
+
+1.0.0 (02.09.2026) - Initial Production Release
+------------
+
+- Production release packaging with R8 shrinking (8.8 MB).
+- Upgraded CI/CD workflows to `actions/upload-artifact@v7`, `actions/checkout@v7`, and `actions/setup-java@v6`.
 - Add: Google GSA bridge
 - Fix: Crash on creating ConfigurationOverlayController
 - Fix: Fix and improve OPML export/import logic

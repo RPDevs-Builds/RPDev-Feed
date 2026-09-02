@@ -44,6 +44,10 @@ jobs:
       - name: Run Unit Tests
         run: ./gradlew testDebugUnitTest
 
+      - name: Compile Release APK
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: ./gradlew assembleRelease --stacktrace
+
       - name: Save name of our Artifact
         id: set-result-artifact
         run: |
@@ -60,3 +64,23 @@ jobs:
           path: ${{ env.ARTIFACT_PATHNAME_APK }}
           if-no-files-found: error
           retention-days: 14
+
+      - name: Upload Release APK Artifact
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: actions/upload-artifact@v7
+        with:
+          name: RPDev-Feed-Release-APK
+          path: app/build/outputs/apk/release/RPDev_Feed_*.apk
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Publish GitHub Release (On Version Tags)
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            app/build/outputs/apk/debug/RPDev_Feed_*.apk
+            app/build/outputs/apk/release/RPDev_Feed_*.apk
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
