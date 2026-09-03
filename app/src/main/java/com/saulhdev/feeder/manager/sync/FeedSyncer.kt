@@ -65,7 +65,7 @@ class FeedSyncer(val context: Context, workerParams: WorkerParameters) :
 
 private const val syncNotificationId = 42624
 private const val syncChannelId = "feederSyncNotifications"
-private const val syncNotificationGroup = "com.saulhdev.neofeed.SYNC"
+private const val syncNotificationGroup = "iamrp.dev.feed.SYNC"
 
 private fun createNotificationChannel(
     context: Context,

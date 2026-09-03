@@ -26,7 +26,7 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.saulhdev.neofeed"
+        applicationId = "iamrp.dev.feed"
         minSdk = 34
         targetSdk = 37
         versionCode = 1100

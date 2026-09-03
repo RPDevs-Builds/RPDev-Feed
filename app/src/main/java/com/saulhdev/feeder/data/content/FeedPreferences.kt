@@ -244,12 +244,12 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         private fun provideDataStore(context: Context): DataStore<Preferences> {
             return PreferenceDataStoreFactory.create(
                 produceFile = {
-                    context.preferencesDataStoreFile("neo_feed")
+                    context.preferencesDataStoreFile("rpdev_feed")
                 },
                 migrations = listOf(
                     SharedPreferencesMigration(
                         context,
-                        "com.saulhdev.neofeed.prefs"
+                        "iamrp.dev.feed.prefs"
                     )
                 )
             )
