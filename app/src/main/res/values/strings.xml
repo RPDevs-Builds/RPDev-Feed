@@ -182,4 +182,25 @@
     <string name="blocked_words_add">Add</string>
     <string name="blocked_words_empty">No blocked words</string>
     <string name="mastodon_no_token">No Mastodon token found for this account</string>
+    <string name="pref_cat_feed_display">Feed Display &amp; Layout</string>
+    <string name="pref_article_display_mode">RSS Article Display Mode</string>
+    <string name="pref_article_display_mode_summary">Control image rendering and layout density for stories</string>
+    <string name="display_mode_image_auto">Display Image if Available</string>
+    <string name="display_mode_text_only">Text Only (No Images)</string>
+    <string name="display_mode_compact">Compact List</string>
+    <string name="pref_hub_placement">Hub Modules Placement</string>
+    <string name="pref_hub_placement_summary">Choose where live context cards appear in your feed</string>
+    <string name="hub_placement_top">Top of Feed (Header)</string>
+    <string name="hub_placement_inline">Inline Between Stories</string>
+    <string name="hub_placement_hidden">Hidden</string>
+    <string name="pref_hub_plugins">Hub Plugins &amp; Live Modules</string>
+    <string name="pref_hub_plugins_summary">Customize card order, feed positions, and dynamic modules</string>
+    <string name="add_custom_module">Add Custom Module</string>
+    <string name="custom_module_name">Module Name</string>
+    <string name="custom_module_endpoint">JSON REST Endpoint URL</string>
+    <string name="custom_module_field_title">Title Field Key (optional)</string>
+    <string name="custom_module_field_subtitle">Subtitle Field Key (optional)</string>
+    <string name="move_up">Move Up</string>
+    <string name="move_down">Move Down</string>
+    <string name="live_preview">Live Preview</string>
 </resources>

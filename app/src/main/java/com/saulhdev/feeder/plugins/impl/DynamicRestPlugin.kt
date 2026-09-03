@@ -24,11 +24,15 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.util.concurrent.TimeUnit
 
-class DynamicRestPlugin : HubPlugin {
+class DynamicRestPlugin(
+    customId: String = "plugin_dynamic_rest",
+    customName: String = "Custom REST / JSON Endpoint",
+    customDescription: String = "Poll arbitrary HTTP JSON APIs (Home Assistant, Uptime Kuma, Gotify, Docker) and render as cards."
+) : HubPlugin {
 
-    override val id: String = "plugin_dynamic_rest"
-    override val name: String = "Custom REST / JSON Endpoint"
-    override val description: String = "Poll arbitrary HTTP JSON APIs (Home Assistant, Uptime Kuma, Gotify, Docker) and render as cards."
+    override val id: String = customId
+    override val name: String = customName
+    override val description: String = customDescription
     override val category: PluginCategory = PluginCategory.CUSTOM
     override val iconName: String = "globe"
     override val defaultRefreshMinutes: Int = 15

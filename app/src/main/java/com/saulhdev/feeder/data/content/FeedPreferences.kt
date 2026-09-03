@@ -176,6 +176,36 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.BlockedWords,
     )
 
+    /* Display & Hub */
+    var articleDisplayMode = StringSelectionPref(
+        titleId = R.string.pref_article_display_mode,
+        summaryId = R.string.pref_article_display_mode_summary,
+        icon = Phosphor.Browser,
+        key = ARTICLE_DISPLAY_MODE,
+        dataStore = dataStore,
+        defaultValue = "image_auto",
+        entries = com.saulhdev.feeder.utils.getArticleDisplayModes(context)
+    )
+
+    var hubPlacement = StringSelectionPref(
+        titleId = R.string.pref_hub_placement,
+        summaryId = R.string.pref_hub_placement_summary,
+        icon = Phosphor.Swatches,
+        key = HUB_PLACEMENT,
+        dataStore = dataStore,
+        defaultValue = "top",
+        entries = com.saulhdev.feeder.utils.getHubPlacementOptions(context)
+    )
+
+    var hubPluginsNav = StringPref(
+        titleId = R.string.pref_hub_plugins,
+        summaryId = R.string.pref_hub_plugins_summary,
+        icon = Phosphor.Hash,
+        key = PLUGINS_NAV,
+        dataStore = get(),
+        route = NavRoute.Plugins
+    )
+
     /* Others */
     var enabledPlugins = StringSetPref(
         titleId = R.string.title_plugin_list,
@@ -269,6 +299,9 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val MASTODON_ITEMS_PER_FEED = stringPreferencesKey("pref_mastodon_items_per_feed")
         val BLOCKED_WORDS = stringSetPreferencesKey("pref_blocked_words")
         val PLUGINS = stringSetPreferencesKey("pref_enabled_plugins")
+        val PLUGINS_NAV = stringPreferencesKey("pref_plugins_nav")
+        val ARTICLE_DISPLAY_MODE = stringPreferencesKey("pref_article_display_mode")
+        val HUB_PLACEMENT = stringPreferencesKey("pref_hub_placement")
         val ABOUT = stringPreferencesKey("pref_about")
         val DEBUG = booleanPreferencesKey("pref_debugging")
 

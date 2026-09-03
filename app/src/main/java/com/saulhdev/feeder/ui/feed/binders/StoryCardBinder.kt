@@ -42,13 +42,17 @@ object StoryCardBinder : FeedBinder {
                 (item.timeMillis / 1000) - 1000
             )
 
+        val displayMode = prefs.articleDisplayMode.getValue()
         if (content.text.isEmpty()) {
             binding.storySummary.visibility = View.GONE
         } else {
+            binding.storySummary.visibility = View.VISIBLE
             binding.storySummary.text = Html.fromHtml(content.text, 0).toString()
         }
 
-        if (
+        if (displayMode == "text_only") {
+            binding.storyPic.visibility = View.GONE
+        } else if (
             content.backgroundUrl.isEmpty() ||
             content.backgroundUrl == "null" ||
             content.backgroundUrl.contains(".rss")
@@ -58,7 +62,7 @@ object StoryCardBinder : FeedBinder {
             binding.storyPic.visibility = View.VISIBLE
             binding.storyPic.load(content.backgroundUrl) {
                 crossfade(true)
-                crossfade(500)
+                crossfade(300)
             }
         }
 

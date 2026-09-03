@@ -14,6 +14,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -58,18 +59,21 @@ fun ArticleItem(
             modifier = Modifier
                 .padding(8.dp),
         ) {
-            if (content.backgroundUrl.isNotEmpty()
+            val prefs: com.saulhdev.feeder.data.content.FeedPreferences = org.koin.compose.koinInject()
+            val displayMode by prefs.articleDisplayMode.get().collectAsState(initial = "image_auto")
+
+            if (displayMode != "text_only" && content.backgroundUrl.isNotEmpty()
                 && !content.backgroundUrl.contains(".rss")
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(LocalContext.current)
                         .data(content.backgroundUrl)
                         .crossfade(true)
-                        .crossfade(500)
+                        .crossfade(300)
                         .build(),
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(240.dp)
+                        .height(220.dp)
                         .clip(MaterialTheme.shapes.medium),
                     contentScale = ContentScale.Crop,
                     contentDescription = ""

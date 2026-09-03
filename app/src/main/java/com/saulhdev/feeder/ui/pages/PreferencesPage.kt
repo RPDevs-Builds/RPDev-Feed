@@ -58,6 +58,11 @@ fun PreferencesPage(
     val context = LocalContext.current
     val title = stringResource(id = R.string.title_settings)
 
+    val feedDisplayPrefs = listOf(
+        prefs.articleDisplayMode,
+        prefs.hubPlacement,
+        prefs.hubPluginsNav,
+    )
     val servicePrefs = listOf(
         prefs.itemsPerFeed,
         prefs.syncFrequency,
@@ -99,6 +104,13 @@ fun PreferencesPage(
                 ),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
+            item(key = R.string.pref_cat_feed_display) {
+                PreferenceGroup(
+                    stringResource(id = R.string.pref_cat_feed_display),
+                    prefs = feedDisplayPrefs,
+                    onPrefDialog = onPrefDialog
+                )
+            }
             item(key = "hub_plugins_card") {
                 androidx.compose.material3.Card(
                     modifier = Modifier
@@ -122,7 +134,7 @@ fun PreferencesPage(
                         )
                         androidx.compose.foundation.layout.Spacer(modifier = Modifier.height(4.dp))
                         androidx.compose.material3.Text(
-                            text = "Configure GitHub Pulse, Privacy Weather, Calendar Agenda, Hardware Telemetry, and Custom REST JSON endpoints.",
+                            text = "Reorder live cards, configure credentials, and manage custom REST JSON endpoints.",
                             style = androidx.compose.material3.MaterialTheme.typography.bodySmall,
                             color = androidx.compose.material3.MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.85f)
                         )
@@ -132,7 +144,7 @@ fun PreferencesPage(
                             onClick = { navController.navigate(com.saulhdev.feeder.ui.navigation.NavRoute.Plugins) },
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            androidx.compose.material3.Text("Manage Plugins & Cards")
+                            androidx.compose.material3.Text("Manage Plugins & Cards Order")
                         }
                     }
                 }

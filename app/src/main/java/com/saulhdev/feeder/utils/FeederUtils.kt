@@ -114,6 +114,22 @@ fun getBackgroundOptions(context: Context): Map<String, String> {
     )
 }
 
+fun getArticleDisplayModes(context: Context): Map<String, String> {
+    return mapOf(
+        "image_auto" to context.resources.getString(R.string.display_mode_image_auto),
+        "text_only" to context.resources.getString(R.string.display_mode_text_only),
+        "compact" to context.resources.getString(R.string.display_mode_compact),
+    )
+}
+
+fun getHubPlacementOptions(context: Context): Map<String, String> {
+    return mapOf(
+        "top" to context.resources.getString(R.string.hub_placement_top),
+        "inline" to context.resources.getString(R.string.hub_placement_inline),
+        "hidden" to context.resources.getString(R.string.hub_placement_hidden),
+    )
+}
+
 /**
  * Ensures a url is valid, having a scheme and everything. It turns 'google.com' into 'http://google.com' for example.
  */

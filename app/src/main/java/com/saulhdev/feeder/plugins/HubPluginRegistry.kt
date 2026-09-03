@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import org.json.JSONObject
 
 class HubPluginRegistry(private val context: Context) {
@@ -32,11 +33,11 @@ class HubPluginRegistry(private val context: Context) {
         context.getSharedPreferences("rpdev_hub_plugins", Context.MODE_PRIVATE)
     }
 
-    private val allPlugins = listOf(
+    private val defaultBuiltInPlugins: List<HubPlugin> = listOf(
         WeatherPlugin(),
-        GitHubPlugin(),
         CalendarPlugin(),
         SensorsPlugin(),
+        GitHubPlugin(),
         DynamicRestPlugin()
     )
 
@@ -46,15 +47,149 @@ class HubPluginRegistry(private val context: Context) {
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
 
-    fun getAllPlugins(): List<HubPlugin> = allPlugins
+    private fun loadCustomPlugins(): List<HubPlugin> {
+        val customJsonStr = prefs.getString("custom_plugins_list", "[]") ?: "[]"
+        val customList = mutableListOf<HubPlugin>()
+        try {
+            val array = JSONArray(customJsonStr)
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                val id = obj.getString("id")
+                val name = obj.optString("name", "Custom REST Module")
+                val desc = obj.optString("description", "Dynamic REST Endpoint")
+                customList.add(
+                    DynamicRestPlugin(
+                        customId = id,
+                        customName = name,
+                        customDescription = desc
+                    )
+                )
+            }
+        } catch (_: Exception) {
+        }
+        return customList
+    }
+
+    fun getAllPlugins(): List<HubPlugin> {
+        val builtIn = defaultBuiltInPlugins
+        val custom = loadCustomPlugins()
+        val allMap = (builtIn + custom).associateBy { it.id }
+
+        val order = getPluginOrder()
+        val orderedList = mutableListOf<HubPlugin>()
+
+        order.forEach { id ->
+            allMap[id]?.let { orderedList.add(it) }
+        }
+
+        // Add any new or missing plugins not yet in saved order
+        allMap.values.forEach { plugin ->
+            if (orderedList.none { it.id == plugin.id }) {
+                orderedList.add(plugin)
+            }
+        }
+
+        return orderedList
+    }
+
+    fun getPluginOrder(): List<String> {
+        val raw = prefs.getString("plugins_order", null)
+        if (!raw.isNullOrBlank()) {
+            try {
+                val array = JSONArray(raw)
+                val list = mutableListOf<String>()
+                for (i in 0 until array.length()) {
+                    list.add(array.getString(i))
+                }
+                return list
+            } catch (_: Exception) {
+            }
+        }
+        return defaultBuiltInPlugins.map { it.id }
+    }
+
+    fun setPluginOrder(orderedIds: List<String>) {
+        val array = JSONArray(orderedIds)
+        prefs.edit().putString("plugins_order", array.toString()).apply()
+        refreshCards()
+    }
+
+    fun movePluginUp(pluginId: String) {
+        val currentOrder = getAllPlugins().map { it.id }.toMutableList()
+        val index = currentOrder.indexOf(pluginId)
+        if (index > 0) {
+            val temp = currentOrder[index]
+            currentOrder[index] = currentOrder[index - 1]
+            currentOrder[index - 1] = temp
+            setPluginOrder(currentOrder)
+        }
+    }
+
+    fun movePluginDown(pluginId: String) {
+        val currentOrder = getAllPlugins().map { it.id }.toMutableList()
+        val index = currentOrder.indexOf(pluginId)
+        if (index >= 0 && index < currentOrder.size - 1) {
+            val temp = currentOrder[index]
+            currentOrder[index] = currentOrder[index + 1]
+            currentOrder[index + 1] = temp
+            setPluginOrder(currentOrder)
+        }
+    }
+
+    fun addCustomPlugin(name: String, endpointUrl: String, headers: String = ""): String {
+        val id = "plugin_custom_rest_${System.currentTimeMillis()}"
+        val customJsonStr = prefs.getString("custom_plugins_list", "[]") ?: "[]"
+        try {
+            val array = JSONArray(customJsonStr)
+            val newObj = JSONObject().apply {
+                put("id", id)
+                put("name", name)
+                put("description", "Custom endpoint: $endpointUrl")
+            }
+            array.put(newObj)
+            prefs.edit().putString("custom_plugins_list", array.toString()).apply()
+
+            // Save config
+            val config = mapOf(
+                "endpoint_url" to endpointUrl,
+                "card_title" to name,
+                "headers" to headers
+            )
+            savePluginConfig(id, config)
+            setPluginEnabled(id, true)
+
+            val newOrder = getPluginOrder() + id
+            setPluginOrder(newOrder)
+        } catch (_: Exception) {
+        }
+        return id
+    }
+
+    fun deleteCustomPlugin(pluginId: String) {
+        val customJsonStr = prefs.getString("custom_plugins_list", "[]") ?: "[]"
+        try {
+            val array = JSONArray(customJsonStr)
+            val newArray = JSONArray()
+            for (i in 0 until array.length()) {
+                val obj = array.getJSONObject(i)
+                if (obj.getString("id") != pluginId) {
+                    newArray.put(obj)
+                }
+            }
+            prefs.edit().putString("custom_plugins_list", newArray.toString()).apply()
+            val newOrder = getPluginOrder().filter { it != pluginId }
+            setPluginOrder(newOrder)
+        } catch (_: Exception) {
+        }
+    }
 
     fun isPluginEnabled(pluginId: String): Boolean {
-        // Weather, Sensors, and Calendar enabled by default; GitHub and REST opt-in
         return prefs.getBoolean("plugin_enabled_$pluginId", pluginId != "plugin_dynamic_rest")
     }
 
     fun setPluginEnabled(pluginId: String, enabled: Boolean) {
         prefs.edit().putBoolean("plugin_enabled_$pluginId", enabled).apply()
+        refreshCards()
     }
 
     fun getPluginConfig(pluginId: String): Map<String, String> {
@@ -75,14 +210,15 @@ class HubPluginRegistry(private val context: Context) {
     fun savePluginConfig(pluginId: String, config: Map<String, String>) {
         val json = JSONObject(config)
         prefs.edit().putString("plugin_config_$pluginId", json.toString()).apply()
+        refreshCards()
     }
 
     fun refreshCards(scope: CoroutineScope = CoroutineScope(Dispatchers.IO)) {
         scope.launch {
             _isRefreshing.value = true
-            val enabledPlugins = allPlugins.filter { isPluginEnabled(it.id) }
+            val orderedPlugins = getAllPlugins().filter { isPluginEnabled(it.id) }
 
-            val deferredResults = enabledPlugins.map { plugin ->
+            val deferredResults = orderedPlugins.map { plugin ->
                 async(Dispatchers.IO) {
                     val config = getPluginConfig(plugin.id)
                     plugin.fetchCardData(context, config).getOrNull()

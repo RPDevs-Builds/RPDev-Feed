@@ -17,13 +17,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -47,23 +49,36 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.saulhdev.feeder.plugins.HubPlugin
 import com.saulhdev.feeder.plugins.HubPluginRegistry
+import com.saulhdev.feeder.plugins.PluginCategory
 import com.saulhdev.feeder.ui.components.ViewWithActionBar
+import com.saulhdev.feeder.ui.components.hub.GenericHubCard
 import com.saulhdev.feeder.ui.icons.Phosphor
 import com.saulhdev.feeder.ui.icons.phosphor.ArrowCounterClockwise
+import com.saulhdev.feeder.ui.icons.phosphor.CaretDown
+import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
+import com.saulhdev.feeder.ui.icons.phosphor.Plus
+import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
 
 @Composable
 fun PluginsPage() {
     val context = LocalContext.current
     val registry = remember { HubPluginRegistry.getInstance(context) }
     val isRefreshing by registry.isRefreshing.collectAsState()
+    val previewCards by registry.cardsFlow.collectAsState()
     var selectedPluginForConfig by remember { mutableStateOf<HubPlugin?>(null) }
+    var showAddCustomDialog by remember { mutableStateOf(false) }
 
-    val plugins = remember { registry.getAllPlugins() }
+    var pluginsList by remember { mutableStateOf(registry.getAllPlugins()) }
     val enabledStates = remember {
         mutableStateMapOf<String, Boolean>().apply {
-            plugins.forEach { put(it.id, registry.isPluginEnabled(it.id)) }
+            pluginsList.forEach { put(it.id, registry.isPluginEnabled(it.id)) }
         }
+    }
+
+    val refreshPluginList = {
+        pluginsList = registry.getAllPlugins()
+        pluginsList.forEach { enabledStates[it.id] = registry.isPluginEnabled(it.id) }
     }
 
     ViewWithActionBar(
@@ -89,26 +104,79 @@ fun PluginsPage() {
         ) {
             item {
                 Text(
-                    text = "Extend your feed screen with live context modules. Configure credentials, tracked repos, and polling intervals.",
+                    text = "Reorder, enable, and customize live context modules in your feed. Use Up/Down arrows to adjust position and display priority.",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(vertical = 6.dp)
                 )
             }
 
-            items(plugins, key = { it.id }) { plugin ->
+            item {
+                Button(
+                    onClick = { showAddCustomDialog = true },
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Icon(
+                        imageVector = Phosphor.Plus,
+                        contentDescription = null,
+                        modifier = Modifier.padding(end = 6.dp)
+                    )
+                    Text("Add Custom REST / JSON Module")
+                }
+            }
+
+            itemsIndexed(pluginsList, key = { _, it -> it.id }) { index, plugin ->
                 PluginItemCard(
                     plugin = plugin,
+                    position = index + 1,
+                    isFirst = index == 0,
+                    isLast = index == pluginsList.size - 1,
                     isEnabled = enabledStates[plugin.id] ?: false,
+                    isCustom = plugin.id.startsWith("plugin_custom_rest_"),
+                    onMoveUp = {
+                        registry.movePluginUp(plugin.id)
+                        refreshPluginList()
+                    },
+                    onMoveDown = {
+                        registry.movePluginDown(plugin.id)
+                        refreshPluginList()
+                    },
                     onToggle = { enabled ->
                         enabledStates[plugin.id] = enabled
                         registry.setPluginEnabled(plugin.id, enabled)
-                        registry.refreshCards()
                     },
                     onConfigure = {
                         selectedPluginForConfig = plugin
+                    },
+                    onDelete = {
+                        registry.deleteCustomPlugin(plugin.id)
+                        refreshPluginList()
                     }
                 )
+            }
+
+            if (previewCards.isNotEmpty()) {
+                item {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+                    Text(
+                        text = "Live Cards Preview",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Active cards as rendered on your feed screen:",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                }
+
+                itemsIndexed(previewCards, key = { index, it -> "${it.pluginId}_$index" }) { _, card ->
+                    GenericHubCard(cardData = card)
+                }
             }
         }
 
@@ -119,8 +187,18 @@ fun PluginsPage() {
                 onDismiss = { selectedPluginForConfig = null },
                 onSave = { updatedConfig ->
                     registry.savePluginConfig(plugin.id, updatedConfig)
-                    registry.refreshCards()
                     selectedPluginForConfig = null
+                }
+            )
+        }
+
+        if (showAddCustomDialog) {
+            AddCustomModuleDialog(
+                onDismiss = { showAddCustomDialog = false },
+                onAdd = { name, url, headers ->
+                    registry.addCustomPlugin(name, url, headers)
+                    refreshPluginList()
+                    showAddCustomDialog = false
                 }
             )
         }
@@ -130,9 +208,16 @@ fun PluginsPage() {
 @Composable
 fun PluginItemCard(
     plugin: HubPlugin,
+    position: Int,
+    isFirst: Boolean,
+    isLast: Boolean,
     isEnabled: Boolean,
+    isCustom: Boolean,
+    onMoveUp: () -> Unit,
+    onMoveDown: () -> Unit,
     onToggle: (Boolean) -> Unit,
-    onConfigure: () -> Unit
+    onConfigure: () -> Unit,
+    onDelete: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -151,24 +236,43 @@ fun PluginItemCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = plugin.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
-                        modifier = Modifier.padding(top = 2.dp)
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.padding(end = 10.dp)
                     ) {
                         Text(
-                            text = plugin.category.displayName,
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            text = "#$position",
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                         )
+                    }
+
+                    Column {
+                        Text(
+                            text = plugin.name,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 2.dp)
+                        ) {
+                            Text(
+                                text = plugin.category.displayName,
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                            )
+                        }
                     }
                 }
 
@@ -186,22 +290,147 @@ fun PluginItemCard(
                 color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
             )
 
-            if (plugin.getConfigFields().isNotEmpty()) {
-                Spacer(modifier = Modifier.height(10.dp))
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    OutlinedButton(
-                        onClick = onConfigure,
-                        shape = RoundedCornerShape(8.dp)
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Reorder buttons
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(
+                        onClick = onMoveUp,
+                        enabled = !isFirst
                     ) {
                         Icon(
-                            imageVector = Phosphor.GearSix,
-                            contentDescription = null,
-                            modifier = Modifier.padding(end = 6.dp)
+                            imageVector = Phosphor.CaretUp,
+                            contentDescription = "Move Up",
+                            tint = if (!isFirst) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
                         )
-                        Text("Configure")
+                    }
+                    IconButton(
+                        onClick = onMoveDown,
+                        enabled = !isLast
+                    ) {
+                        Icon(
+                            imageVector = Phosphor.CaretDown,
+                            contentDescription = "Move Down",
+                            tint = if (!isLast) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.3f)
+                        )
+                    }
+                }
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    if (isCustom) {
+                        IconButton(onClick = onDelete) {
+                            Icon(
+                                imageVector = Phosphor.TrashSimple,
+                                contentDescription = "Delete Module",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
+
+                    if (plugin.getConfigFields().isNotEmpty()) {
+                        OutlinedButton(
+                            onClick = onConfigure,
+                            shape = RoundedCornerShape(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Phosphor.GearSix,
+                                contentDescription = null,
+                                modifier = Modifier.padding(end = 6.dp)
+                            )
+                            Text("Configure")
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AddCustomModuleDialog(
+    onDismiss: () -> Unit,
+    onAdd: (name: String, url: String, headers: String) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var url by remember { mutableStateOf("") }
+    var headers by remember { mutableStateOf("") }
+
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surface,
+            tonalElevation = 6.dp,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(20.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text(
+                    text = "➕ Add Custom Module",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    text = "Poll any JSON API and render live stats cards in your feed.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
+                )
+
+                OutlinedTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = { Text("Module Name") },
+                    placeholder = { Text("e.g. Server Status / Home Assistant") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                OutlinedTextField(
+                    value = url,
+                    onValueChange = { url = it },
+                    label = { Text("JSON Endpoint URL") },
+                    placeholder = { Text("https://api.example.com/status") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                OutlinedTextField(
+                    value = headers,
+                    onValueChange = { headers = it },
+                    label = { Text("Headers (JSON Optional)") },
+                    placeholder = { Text("{\"Authorization\": \"Bearer token\"}") },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.End,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    OutlinedButton(onClick = onDismiss) {
+                        Text("Cancel")
+                    }
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Button(
+                        onClick = { onAdd(name.ifBlank { "Custom REST" }, url, headers) },
+                        enabled = url.isNotBlank()
+                    ) {
+                        Text("Add Module")
                     }
                 }
             }
@@ -286,3 +515,4 @@ fun PluginConfigDialog(
         }
     }
 }
+
