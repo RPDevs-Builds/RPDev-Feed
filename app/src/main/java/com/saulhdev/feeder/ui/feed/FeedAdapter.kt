@@ -22,12 +22,20 @@ import android.util.SparseIntArray
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.ViewCompositionStrategy
 import androidx.recyclerview.widget.RecyclerView
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.db.models.FeedItem
+import com.saulhdev.feeder.ui.components.hub.HubDashboardSection
 import com.saulhdev.feeder.ui.feed.binders.StoryCardBinder
 
-class FeedAdapter : RecyclerView.Adapter<FeedAdapter.FeedViewHolder>() {
+class FeedAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+    companion object {
+        const val VIEW_TYPE_HUB_HEADER = 0
+        const val VIEW_TYPE_STORY = 1
+    }
+
     private var list = listOf<FeedItem>()
     private lateinit var layoutInflater: LayoutInflater
     private var theme: SparseIntArray? = null
@@ -45,20 +53,45 @@ class FeedAdapter : RecyclerView.Adapter<FeedAdapter.FeedViewHolder>() {
     }
 
     override fun getItemCount(): Int {
-        return list.size
+        return list.size + 1
     }
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): FeedViewHolder {
+    override fun getItemViewType(position: Int): Int {
+        return if (position == 0) VIEW_TYPE_HUB_HEADER else VIEW_TYPE_STORY
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): RecyclerView.ViewHolder {
         if (!::layoutInflater.isInitialized) layoutInflater = LayoutInflater.from(parent.context)
 
-        val layoutResource = R.layout.feed_card_story_large
-
-        return FeedViewHolder(viewType, layoutInflater.inflate(layoutResource, parent, false))
+        return if (viewType == VIEW_TYPE_HUB_HEADER) {
+            val layoutResource = R.layout.feed_hub_header
+            HubHeaderViewHolder(layoutInflater.inflate(layoutResource, parent, false))
+        } else {
+            val layoutResource = R.layout.feed_card_story_large
+            FeedViewHolder(viewType, layoutInflater.inflate(layoutResource, parent, false))
+        }
     }
 
-    override fun onBindViewHolder(holder: FeedViewHolder, position: Int) {
-        val item = list[position]
-        StoryCardBinder.bind(theme, item, holder.itemView)
+    override fun onBindViewHolder(holder: RecyclerView.ViewHolder, position: Int) {
+        if (holder is HubHeaderViewHolder) {
+            holder.bind()
+        } else if (holder is FeedViewHolder && position > 0 && position <= list.size) {
+            val item = list[position - 1]
+            StoryCardBinder.bind(theme, item, holder.itemView)
+        }
+    }
+
+    class HubHeaderViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        private val composeView: ComposeView = itemView.findViewById(R.id.compose_hub_view)
+
+        fun bind() {
+            composeView.setViewCompositionStrategy(
+                ViewCompositionStrategy.DisposeOnViewTreeLifecycleDestroyed
+            )
+            composeView.setContent {
+                HubDashboardSection()
+            }
+        }
     }
 
     inner class FeedViewHolder(val type: Int, itemView: View) : RecyclerView.ViewHolder(itemView)

@@ -54,6 +54,42 @@ class SourcesRepository(db: NeoFeedDb) {
         feedsDao.insert(feed)
     }
 
+    suspend fun seedDefaultSourcesIfEmpty() = withContext(jcc) {
+        if (feedsDao.loadFeedIds().isEmpty()) {
+            val defaults = listOf(
+                Feed(
+                    title = "Ars Technica",
+                    description = "Original analysis of technology, science, and policy",
+                    url = com.saulhdev.feeder.utils.sloppyLinkToStrictURL("https://feeds.arstechnica.com/arstechnica/index"),
+                    tag = "Tech, News",
+                    isEnabled = true
+                ),
+                Feed(
+                    title = "Android Developers Blog",
+                    description = "Official news and announcements for Android developers",
+                    url = com.saulhdev.feeder.utils.sloppyLinkToStrictURL("https://android-developers.googleblog.com/feeds/posts/default"),
+                    tag = "Android, Dev",
+                    isEnabled = true
+                ),
+                Feed(
+                    title = "GitHub Blog",
+                    description = "Updates, ideas, and inspiration from GitHub",
+                    url = com.saulhdev.feeder.utils.sloppyLinkToStrictURL("https://github.blog/feed/"),
+                    tag = "Dev, Open Source",
+                    isEnabled = true
+                ),
+                Feed(
+                    title = "Hacker News",
+                    description = "Hacker News Front Page",
+                    url = com.saulhdev.feeder.utils.sloppyLinkToStrictURL("https://news.ycombinator.com/rss"),
+                    tag = "Tech",
+                    isEnabled = true
+                )
+            )
+            defaults.forEach { feedsDao.insert(it) }
+        }
+    }
+
     suspend fun updateSource(feed: Feed, resync: Boolean = false) {
         withContext(jcc) {
             if (feedsDao.existsById(feed.id)) {

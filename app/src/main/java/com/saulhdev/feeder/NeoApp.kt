@@ -29,6 +29,7 @@ import com.saulhdev.feeder.viewmodels.SortFilterViewModel
 import com.saulhdev.feeder.viewmodels.SourceEditViewModel
 import com.saulhdev.feeder.viewmodels.SourceListViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import org.koin.android.ext.koin.androidContext
 import org.koin.android.ext.koin.androidLogger
@@ -117,6 +118,12 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         )
         wm.pruneWork()
         onAppStarted()
+        applicationCoroutineScope.launch(Dispatchers.IO) {
+            val repo: SourcesRepository by inject(SourcesRepository::class.java)
+            repo.seedDefaultSourcesIfEmpty()
+            val syncClient: SyncRestClient by inject(SyncRestClient::class.java)
+            syncClient.syncAllFeeds()
+        }
     }
 
     override fun onTerminate() {

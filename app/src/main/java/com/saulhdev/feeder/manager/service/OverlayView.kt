@@ -148,6 +148,7 @@ class OverlayView(val context: Context) :
             pendingCloseOnResume = false
             closePanelIfNeeded(1)
         }
+        com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).refreshCards()
     }
 
     private fun updateTheme(force: String? = null) {
@@ -440,6 +441,7 @@ class OverlayView(val context: Context) :
 
     private fun refreshNotifications() {
         syncScope.launch {
+            com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).refreshCards()
             articles.syncAllFeeds()
         }
     }
