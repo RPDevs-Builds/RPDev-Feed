@@ -35,16 +35,22 @@ class WeatherPlugin : HubPlugin {
 
     override fun getConfigFields(): List<PluginConfigField> = listOf(
         PluginConfigField(
+            key = "location_name",
+            label = "Location Name",
+            description = "City / Region display name (e.g. New York, Miami, London)",
+            defaultValue = "New York, NY"
+        ),
+        PluginConfigField(
             key = "latitude",
             label = "Latitude",
-            description = "Latitude coordinate (Leave default to use device location)",
+            description = "Latitude coordinate (Leave default or use Location search/GPS)",
             type = ConfigFieldType.NUMBER,
             defaultValue = "40.7128"
         ),
         PluginConfigField(
             key = "longitude",
             label = "Longitude",
-            description = "Longitude coordinate (Leave default to use device location)",
+            description = "Longitude coordinate (Leave default or use Location search/GPS)",
             type = ConfigFieldType.NUMBER,
             defaultValue = "-74.0060"
         ),
@@ -66,7 +72,7 @@ class WeatherPlugin : HubPlugin {
             return configLat to configLon
         }
 
-        // Attempt device GPS / network location detection
+        // Attempt device GPS / network location detection only if user permitted
         try {
             val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
             if (lm != null) {
@@ -95,13 +101,15 @@ class WeatherPlugin : HubPlugin {
     ): Result<HubCardData> {
         val (lat, lon) = resolveEffectiveLocation(context, config)
         val isFahrenheit = config["use_fahrenheit"]?.toBooleanStrictOrNull() ?: false
+        val locName = config["location_name"]?.takeIf { it.isNotBlank() } ?: "Local Weather"
 
         return client.fetchWeather(lat, lon, isFahrenheit).map { weather ->
             val unit = if (isFahrenheit) "°F" else "°C"
+            val windUnit = if (isFahrenheit) "mph" else "km/h"
             val chips = listOf(
                 HubChip(label = "🌡️ Feels: ${weather.apparentTemperature.toInt()}$unit", colorHex = "#00bcd4"),
                 HubChip(label = "💧 Humidity: ${weather.relativeHumidity}%", colorHex = "#2196f3"),
-                HubChip(label = "💨 Wind: ${weather.windSpeed.toInt()} km/h", colorHex = "#607d8b")
+                HubChip(label = "💨 Wind: ${weather.windSpeed.toInt()} $windUnit", colorHex = "#607d8b")
             )
 
             val timelineItems = weather.hourlyForecast.take(4).map { h ->
@@ -119,7 +127,7 @@ class WeatherPlugin : HubPlugin {
 
             HubCardData.Composite(
                 pluginId = id,
-                title = "🌦️ Weather ${weather.conditionIcon}",
+                title = "🌦️ Weather ($locName) ${weather.conditionIcon}",
                 subtitle = "${weather.temperature.toInt()}$unit — ${weather.conditionDescription}",
                 badge = "${weather.temperature.toInt()}$unit",
                 chips = chips,

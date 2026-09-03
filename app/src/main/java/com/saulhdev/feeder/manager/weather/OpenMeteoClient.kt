@@ -16,6 +16,19 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
+data class GeoLocationResult(
+    val name: String,
+    val latitude: Double,
+    val longitude: Double,
+    val country: String = "",
+    val admin1: String = "",
+    val timezone: String = "",
+    val countryCode: String = ""
+) {
+    val displayLabel: String
+        get() = listOf(name, admin1, country).filter { it.isNotBlank() }.joinToString(", ")
+}
+
 data class WeatherInfo(
     val temperature: Double,
     val apparentTemperature: Double,
@@ -41,6 +54,7 @@ class OpenMeteoClient(private val okHttpClient: OkHttpClient = defaultClient()) 
     companion object {
         private const val TAG = "OpenMeteoClient"
         private const val BASE_URL = "https://api.open-meteo.com/v1/forecast"
+        private const val GEO_URL = "https://geocoding-api.open-meteo.com/v1/search"
 
         private fun defaultClient(): OkHttpClient {
             return OkHttpClient.Builder()
@@ -140,6 +154,49 @@ class OpenMeteoClient(private val okHttpClient: OkHttpClient = defaultClient()) 
             )
         } catch (e: Exception) {
             Log.e(TAG, "Failed to fetch weather from Open-Meteo", e)
+            Result.failure(e)
+        }
+    }
+
+    suspend fun searchLocation(query: String): Result<List<GeoLocationResult>> = withContext(Dispatchers.IO) {
+        val trimmed = query.trim()
+        if (trimmed.length < 2) return@withContext Result.success(emptyList())
+
+        try {
+            val encoded = java.net.URLEncoder.encode(trimmed, "UTF-8")
+            val url = "$GEO_URL?name=$encoded&count=8&language=en&format=json"
+            val request = Request.Builder()
+                .url(url)
+                .header("User-Agent", "RPDev-Feed/1.0.0 (Android; Privacy-First)")
+                .build()
+
+            val response = okHttpClient.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(IOException("Geocoding HTTP ${response.code}"))
+            }
+
+            val body = response.body?.string() ?: return@withContext Result.success(emptyList())
+            val json = JSONObject(body)
+            val results = json.optJSONArray("results") ?: return@withContext Result.success(emptyList())
+
+            val list = mutableListOf<GeoLocationResult>()
+            for (i in 0 until results.length()) {
+                val item = results.getJSONObject(i)
+                list.add(
+                    GeoLocationResult(
+                        name = item.optString("name", ""),
+                        latitude = item.optDouble("latitude", 0.0),
+                        longitude = item.optDouble("longitude", 0.0),
+                        country = item.optString("country", ""),
+                        admin1 = item.optString("admin1", ""),
+                        timezone = item.optString("timezone", ""),
+                        countryCode = item.optString("country_code", "")
+                    )
+                )
+            }
+            Result.success(list)
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to geocode location", e)
             Result.failure(e)
         }
     }

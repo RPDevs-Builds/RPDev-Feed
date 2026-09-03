@@ -7,6 +7,15 @@
 
 package com.saulhdev.feeder.ui.pages
 
+import android.Manifest
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Geocoder
+import android.location.Location
+import android.location.LocationManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -40,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -47,6 +57,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.core.content.ContextCompat
 import com.saulhdev.feeder.plugins.HubPlugin
 import com.saulhdev.feeder.plugins.HubPluginRegistry
 import com.saulhdev.feeder.plugins.PluginCategory
@@ -59,6 +70,8 @@ import com.saulhdev.feeder.ui.icons.phosphor.CaretUp
 import com.saulhdev.feeder.ui.icons.phosphor.GearSix
 import com.saulhdev.feeder.ui.icons.phosphor.Plus
 import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
+import java.util.Locale
+import kotlinx.coroutines.launch
 
 @Composable
 fun PluginsPage() {
@@ -445,11 +458,82 @@ fun PluginConfigDialog(
     onDismiss: () -> Unit,
     onSave: (Map<String, String>) -> Unit
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val configState = remember {
         mutableStateMapOf<String, String>().apply {
             plugin.getConfigFields().forEach { field ->
                 put(field.key, initialConfig[field.key] ?: field.defaultValue)
             }
+        }
+    }
+
+    var searchQuery by remember { mutableStateOf("") }
+    var isSearching by remember { mutableStateOf(false) }
+    var searchResults by remember { mutableStateOf<List<com.saulhdev.feeder.manager.weather.GeoLocationResult>>(emptyList()) }
+    var locationStatusMessage by remember { mutableStateOf<String?>(null) }
+
+    val retrieveGpsLocation = {
+        try {
+            val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+            if (hasFine || hasCoarse) {
+                val lm = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager
+                if (lm != null) {
+                    val providers: List<String> = lm.getProviders(true)
+                    var foundLoc: Location? = null
+                    for (p in providers) {
+                        try {
+                            @Suppress("MissingPermission")
+                            val loc = lm.getLastKnownLocation(p)
+                            if (loc != null && (loc.latitude != 0.0 || loc.longitude != 0.0)) {
+                                foundLoc = loc
+                                break
+                            }
+                        } catch (_: SecurityException) {
+                        }
+                    }
+                    if (foundLoc != null) {
+                        configState["latitude"] = String.format(Locale.US, "%.4f", foundLoc.latitude)
+                        configState["longitude"] = String.format(Locale.US, "%.4f", foundLoc.longitude)
+
+                        try {
+                            val geocoder = Geocoder(context, Locale.getDefault())
+                            @Suppress("DEPRECATION")
+                            val addresses = geocoder.getFromLocation(foundLoc.latitude, foundLoc.longitude, 1)
+                            if (!addresses.isNullOrEmpty()) {
+                                val addr = addresses[0]
+                                val city = addr.locality ?: addr.subAdminArea ?: addr.adminArea ?: "Current Location"
+                                val stateOrCountry = addr.adminArea ?: addr.countryName ?: ""
+                                val locStr = if (stateOrCountry.isNotBlank() && stateOrCountry != city) "$city, $stateOrCountry" else city
+                                configState["location_name"] = locStr
+                                locationStatusMessage = "📍 Location detected: $locStr"
+                            } else {
+                                configState["location_name"] = "Current Location"
+                                locationStatusMessage = "📍 GPS location acquired (${configState["latitude"]}, ${configState["longitude"]})"
+                            }
+                        } catch (_: Exception) {
+                            configState["location_name"] = "Current Location"
+                            locationStatusMessage = "📍 GPS location acquired (${configState["latitude"]}, ${configState["longitude"]})"
+                        }
+                    } else {
+                        locationStatusMessage = "⚠️ No GPS fix found yet. Please enter Address / Zip or try again."
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            locationStatusMessage = "Location error: ${e.message}"
+        }
+    }
+
+    val locationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { perms: Map<String, Boolean> ->
+        val granted = perms.values.any { it }
+        if (granted) {
+            retrieveGpsLocation()
+        } else {
+            locationStatusMessage = "⚠️ Location permission denied. You can search by Address / Zip code below."
         }
     }
 
@@ -477,6 +561,159 @@ fun PluginConfigDialog(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 4.dp, bottom = 14.dp)
                 )
+
+                if (plugin.id == "plugin_weather") {
+                    Card(
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 12.dp)
+                    ) {
+                        Column(modifier = Modifier.padding(12.dp)) {
+                            Text(
+                                text = "📍 Weather Location Lookup",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = "Find Lat/Long coordinates by city name, address, or zip code, or tap to request GPS access.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                modifier = Modifier.padding(top = 2.dp, bottom = 8.dp)
+                            )
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                OutlinedTextField(
+                                    value = searchQuery,
+                                    onValueChange = { searchQuery = it },
+                                    label = { Text("Address, City, or Zip") },
+                                    placeholder = { Text("e.g. 90210, Miami, London") },
+                                    singleLine = true,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Button(
+                                    onClick = {
+                                        if (searchQuery.isNotBlank()) {
+                                            isSearching = true
+                                            coroutineScope.launch {
+                                                val client = com.saulhdev.feeder.manager.weather.OpenMeteoClient()
+                                                val res = client.searchLocation(searchQuery)
+                                                searchResults = res.getOrDefault(emptyList())
+                                                isSearching = false
+                                                if (searchResults.isEmpty()) {
+                                                    locationStatusMessage = "No results found for '$searchQuery'"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    enabled = searchQuery.isNotBlank() && !isSearching
+                                ) {
+                                    Text(if (isSearching) "..." else "Search")
+                                }
+                            }
+
+                            if (searchResults.isNotEmpty()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Select matching location:",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(top = 4.dp),
+                                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                                ) {
+                                    searchResults.forEach { loc ->
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = MaterialTheme.colorScheme.surface,
+                                            tonalElevation = 2.dp,
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable {
+                                                    configState["location_name"] = loc.displayLabel
+                                                    configState["latitude"] = String.format(Locale.US, "%.4f", loc.latitude)
+                                                    configState["longitude"] = String.format(Locale.US, "%.4f", loc.longitude)
+                                                    locationStatusMessage = "✅ Selected: ${loc.displayLabel}"
+                                                    searchResults = emptyList()
+                                                    searchQuery = ""
+                                                }
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.padding(horizontal = 10.dp, vertical = 8.dp),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Column(modifier = Modifier.weight(1f)) {
+                                                    Text(
+                                                        text = loc.displayLabel,
+                                                        style = MaterialTheme.typography.bodyMedium,
+                                                        fontWeight = FontWeight.Medium
+                                                    )
+                                                    Text(
+                                                        text = "Lat: ${loc.latitude}, Lon: ${loc.longitude}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Text(
+                                                    text = "Select",
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    color = MaterialTheme.colorScheme.primary,
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedButton(
+                                onClick = {
+                                    val hasFine = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                                    val hasCoarse = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                                    if (hasFine || hasCoarse) {
+                                        retrieveGpsLocation()
+                                    } else {
+                                        locationPermissionLauncher.launch(
+                                            arrayOf(
+                                                Manifest.permission.ACCESS_FINE_LOCATION,
+                                                Manifest.permission.ACCESS_COARSE_LOCATION
+                                            )
+                                        )
+                                    }
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            ) {
+                                Text("📍 Use Device Location (GPS)")
+                            }
+
+                            locationStatusMessage?.let { msg ->
+                                Spacer(modifier = Modifier.height(6.dp))
+                                Text(
+                                    text = msg,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.Medium
+                                )
+                            }
+                        }
+                    }
+                }
 
                 plugin.getConfigFields().forEach { field ->
                     OutlinedTextField(
