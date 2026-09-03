@@ -178,6 +178,18 @@ abstract class OverlayControllerCallback extends BaseCallback {
         controller.window.setContentView(controller.slidingPanelLayout);
 
         controller.windowView = controller.window.getDecorView();
+        if (controller instanceof androidx.lifecycle.LifecycleOwner) {
+            androidx.lifecycle.ViewTreeLifecycleOwner.set(controller.windowView, (androidx.lifecycle.LifecycleOwner) controller);
+            androidx.lifecycle.ViewTreeLifecycleOwner.set(controller.slidingPanelLayout, (androidx.lifecycle.LifecycleOwner) controller);
+        }
+        if (controller instanceof androidx.lifecycle.ViewModelStoreOwner) {
+            androidx.lifecycle.ViewTreeViewModelStoreOwner.set(controller.windowView, (androidx.lifecycle.ViewModelStoreOwner) controller);
+            androidx.lifecycle.ViewTreeViewModelStoreOwner.set(controller.slidingPanelLayout, (androidx.lifecycle.ViewModelStoreOwner) controller);
+        }
+        if (controller instanceof androidx.savedstate.SavedStateRegistryOwner) {
+            androidx.savedstate.ViewTreeSavedStateRegistryOwner.set(controller.windowView, (androidx.savedstate.SavedStateRegistryOwner) controller);
+            androidx.savedstate.ViewTreeSavedStateRegistryOwner.set(controller.slidingPanelLayout, (androidx.savedstate.SavedStateRegistryOwner) controller);
+        }
         controller.windowManager.addView(controller.windowView, controller.window.getAttributes());
         controller.registerBackCallbackIfNeeded();
 

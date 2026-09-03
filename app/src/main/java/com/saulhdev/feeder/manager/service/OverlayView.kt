@@ -44,6 +44,17 @@ import com.saulhdev.feeder.utils.extensions.isDark
 import com.saulhdev.feeder.utils.extensions.safeStartActivity
 import com.saulhdev.feeder.utils.extensions.setCustomTheme
 import com.saulhdev.feeder.viewmodels.ArticleListViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.LifecycleRegistry
+import androidx.lifecycle.ViewModelStore
+import androidx.lifecycle.ViewModelStoreOwner
+import androidx.lifecycle.setViewTreeLifecycleOwner
+import androidx.lifecycle.setViewTreeViewModelStoreOwner
+import androidx.savedstate.SavedStateRegistry
+import androidx.savedstate.SavedStateRegistryController
+import androidx.savedstate.SavedStateRegistryOwner
+import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -55,7 +66,18 @@ import org.koin.java.KoinJavaComponent.inject
 
 class OverlayView(val context: Context) :
     OverlayController(context, R.style.AppTheme, R.style.WindowTheme),
-    KoinComponent, OverlayBridge.OverlayBridgeCallback {
+    KoinComponent, OverlayBridge.OverlayBridgeCallback,
+    LifecycleOwner, ViewModelStoreOwner, SavedStateRegistryOwner {
+
+    private val lifecycleRegistry = LifecycleRegistry(this)
+    override val lifecycle: Lifecycle get() = lifecycleRegistry
+
+    private val _viewModelStore = ViewModelStore()
+    override val viewModelStore: ViewModelStore get() = _viewModelStore
+
+    private val savedStateRegistryController = SavedStateRegistryController.create(this)
+    override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
+
     private lateinit var themeHolder: OverlayThemeHolder
     private val syncScope = CoroutineScope(Dispatchers.IO) + CoroutineName("NeoFeedSync")
     private val mainScope = CoroutineScope(Dispatchers.Main)
@@ -78,7 +100,22 @@ class OverlayView(val context: Context) :
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        savedStateRegistryController.performRestore(savedInstanceState)
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_CREATE)
         super.onCreate(savedInstanceState)
+
+        container?.setViewTreeLifecycleOwner(this)
+        container?.setViewTreeViewModelStoreOwner(this)
+        container?.setViewTreeSavedStateRegistryOwner(this)
+
+        try {
+            window?.decorView?.let { decor ->
+                decor.setViewTreeLifecycleOwner(this)
+                decor.setViewTreeViewModelStoreOwner(this)
+                decor.setViewTreeSavedStateRegistryOwner(this)
+            }
+        } catch (_: Throwable) {
+        }
 
         themeHolder = OverlayThemeHolder(this)
         val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
@@ -89,6 +126,11 @@ class OverlayView(val context: Context) :
             R.layout.overlay_layout,
             this.container
         )
+
+        rootView.setViewTreeLifecycleOwner(this)
+        rootView.setViewTreeViewModelStoreOwner(this)
+        rootView.setViewTreeSavedStateRegistryOwner(this)
+
         val mainContainer = rootView.findViewById<ViewGroup>(R.id.overlay_root)
         AbstractFloatingView.container = mainContainer
         AbstractFloatingView.closeAllOpenViews(context)
@@ -142,13 +184,29 @@ class OverlayView(val context: Context) :
         }
     }
 
+    override fun onStart() {
+        super.onStart()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_START)
+    }
+
     override fun onResume() {
         super.onResume()
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_RESUME)
         if (pendingCloseOnResume) {
             pendingCloseOnResume = false
             closePanelIfNeeded(1)
         }
         com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).refreshCards()
+    }
+
+    override fun onPause() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_PAUSE)
+        super.onPause()
+    }
+
+    override fun onStop() {
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_STOP)
+        super.onStop()
     }
 
     private fun updateTheme(force: String? = null) {
@@ -402,6 +460,8 @@ class OverlayView(val context: Context) :
             context.unregisterReceiver(closeSystemDialogsReceiver)
         } catch (_: Exception) {
         }
+        lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
+        _viewModelStore.clear()
         super.onDestroy()
         NeoApp.bridge.setCallback(null)
     }
