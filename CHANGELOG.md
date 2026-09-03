@@ -1,6 +1,17 @@
 CHANGELOG
 =========
 
+1.1.0 (03.09.2026) - Modular Plugin System & GitHub Pulse Hub Engine
+------------
+
+### Modular Plugin Engine & SPI Contract
+- Add: `HubPlugin` SPI interface supporting dynamic card generation, preference schemas, and independent lifecycle hooks.
+- Add: Standardized card archetypes (`MetricCardData`, `TimelineCardData`, `ProgressCardData`, `ActionCardData`, `CompositeCardData`).
+- Add: Built-in **GitHub Pulse** plugin displaying real-time commit streams, CI/CD pipeline statuses, star milestones, and active workflow telemetry.
+- Add: Plugin Manager settings UI (`PluginManagerPage`) enabling users to toggle, reorder, and configure individual plugins.
+- Add: Dynamic card registry and IPC receiver allowing external APKs and plugins to inject rich interactive cards into the feed overlay.
+- Update: Bumped version to v1.1.0 (versionCode 1100).
+
 1.0.1 (02.09.2026) - Decoupled Powerhouse Hub Release
 ------------
 

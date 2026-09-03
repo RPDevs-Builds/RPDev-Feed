@@ -41,6 +41,12 @@
 - **Live Broadcast Receiver**: Send intents (`iamrp.dev.feed.ACTION_POST_CARD`) from Tasker, Termux, or Automate to inject cards dynamically into your feed overlay.
 - **Custom REST Polling**: Integrate Home Assistant, Uptime Kuma, and Gotify alerts into custom feed cards.
 
+### 🔌 Modular Plugin System & GitHub Pulse
+- **`HubPlugin` SPI Engine**: Extensible plugin architecture with decoupled lifecycle hooks, custom preference sheets, and card generators.
+- **GitHub Pulse Module**: Real-time GitHub commit feeds, workflow dispatch status indicators, star tracking, and repository health metrics.
+- **Card Archetypes**: Standardized Material 3 card renderers (Metric, Timeline, Progress, Action, Composite).
+- **Plugin Manager UI**: Toggle, customize, and arrange active plugins on the fly.
+
 ### 📰 RSS, Atom & JSON Feed Reader
 - **Multi-Format Ingestion**: Ingest RSS, Atom, and JSON Feed v1.1 channels with offline caching and read-it-later bookmarking.
 - **Adaptive Layouts**: Full support for phones, foldable tablets, and landscape desktop mode.

@@ -45,7 +45,6 @@ jobs:
         run: ./gradlew testDebugUnitTest
 
       - name: Compile Release APK
-        if: startsWith(github.ref, 'refs/tags/v')
         run: ./gradlew assembleRelease --stacktrace
 
       - name: Save name of our Artifact
@@ -66,7 +65,6 @@ jobs:
           retention-days: 14
 
       - name: Upload Release APK Artifact
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: actions/upload-artifact@v7
         with:
           name: RPDev-Feed-Release-APK
