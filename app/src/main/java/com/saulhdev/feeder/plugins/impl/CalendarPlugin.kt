@@ -66,7 +66,11 @@ class CalendarPlugin : HubPlugin {
             badge = if (events.isNotEmpty()) "${events.size} Events" else "Clear",
             items = timelineItems,
             actions = listOf(
-                HubAction(label = "Open Calendar", isPrimary = true, intentAction = "android.intent.action.MAIN")
+                HubAction(
+                    label = "Open Calendar",
+                    isPrimary = true,
+                    url = "content://com.android.calendar/time/${System.currentTimeMillis()}"
+                )
             )
         )
 

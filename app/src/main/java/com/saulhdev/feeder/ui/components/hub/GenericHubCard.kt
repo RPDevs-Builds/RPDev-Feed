@@ -301,12 +301,25 @@ private fun executeAction(context: android.content.Context, action: HubAction) {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
-        } else if (!action.intentAction.isNullOrBlank()) {
+            return
+        }
+        if (!action.intentAction.isNullOrBlank()) {
             val intent = Intent(action.intentAction).apply {
                 addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
             }
             context.startActivity(intent)
+            return
         }
     } catch (_: Exception) {
+        if (action.label.contains("Calendar", ignoreCase = true)) {
+            try {
+                val calendarIntent = Intent(Intent.ACTION_VIEW).apply {
+                    data = Uri.parse("content://com.android.calendar/time/${System.currentTimeMillis()}")
+                    addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                }
+                context.startActivity(calendarIntent)
+            } catch (_: Exception) {
+            }
+        }
     }
 }
