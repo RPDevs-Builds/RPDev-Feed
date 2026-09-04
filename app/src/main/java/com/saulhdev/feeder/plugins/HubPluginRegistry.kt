@@ -14,6 +14,7 @@ import com.saulhdev.feeder.plugins.impl.DynamicRestPlugin
 import com.saulhdev.feeder.plugins.impl.GitHubPlugin
 import com.saulhdev.feeder.plugins.impl.SensorsPlugin
 import com.saulhdev.feeder.plugins.impl.WeatherPlugin
+import com.saulhdev.feeder.plugins.impl.WebScraperPlugin
 import com.saulhdev.feeder.plugins.models.HubCardData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -33,16 +34,20 @@ class HubPluginRegistry(private val context: Context) {
         context.getSharedPreferences("rpdev_hub_plugins", Context.MODE_PRIVATE)
     }
 
-    private val defaultBuiltInPlugins: List<HubPlugin> = listOf(
+    private val allKnownBuiltInPlugins: List<HubPlugin> = listOf(
         WeatherPlugin(),
-        CalendarPlugin(),
         SensorsPlugin(),
+        CalendarPlugin(),
         GitHubPlugin(),
+        WebScraperPlugin(),
         DynamicRestPlugin()
     )
 
     private val _cardsFlow = MutableStateFlow<List<HubCardData>>(emptyList())
     val cardsFlow: StateFlow<List<HubCardData>> = _cardsFlow.asStateFlow()
+
+    private val _dismissedCardIds = MutableStateFlow<Set<String>>(emptySet())
+    val dismissedCardIds: StateFlow<Set<String>> = _dismissedCardIds.asStateFlow()
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -71,9 +76,10 @@ class HubPluginRegistry(private val context: Context) {
     }
 
     fun getAllPlugins(): List<HubPlugin> {
-        val builtIn = defaultBuiltInPlugins
-        val custom = loadCustomPlugins()
-        val allMap = (builtIn + custom).associateBy { it.id }
+        val moduleManager = HubModuleManager.getInstance(context)
+        val installedBuiltIn = allKnownBuiltInPlugins.filter { moduleManager.isInstalled(it.id) }
+        val custom = loadCustomPlugins().filter { moduleManager.isInstalled(it.id) }
+        val allMap = (installedBuiltIn + custom).associateBy { it.id }
 
         val order = getPluginOrder()
         val orderedList = mutableListOf<HubPlugin>()
@@ -92,6 +98,10 @@ class HubPluginRegistry(private val context: Context) {
         return orderedList
     }
 
+    fun notifyModulesChanged() {
+        refreshCards()
+    }
+
     fun getPluginOrder(): List<String> {
         val raw = prefs.getString("plugins_order", null)
         if (!raw.isNullOrBlank()) {
@@ -105,7 +115,7 @@ class HubPluginRegistry(private val context: Context) {
             } catch (_: Exception) {
             }
         }
-        return defaultBuiltInPlugins.map { it.id }
+        return allKnownBuiltInPlugins.map { it.id }
     }
 
     fun setPluginOrder(orderedIds: List<String>) {
@@ -156,6 +166,7 @@ class HubPluginRegistry(private val context: Context) {
                 "headers" to headers
             )
             savePluginConfig(id, config)
+            HubModuleManager.getInstance(context).installModule(id)
             setPluginEnabled(id, true)
 
             val newOrder = getPluginOrder() + id
@@ -166,6 +177,7 @@ class HubPluginRegistry(private val context: Context) {
     }
 
     fun deleteCustomPlugin(pluginId: String) {
+        HubModuleManager.getInstance(context).uninstallModule(pluginId)
         val customJsonStr = prefs.getString("custom_plugins_list", "[]") ?: "[]"
         try {
             val array = JSONArray(customJsonStr)
@@ -180,6 +192,14 @@ class HubPluginRegistry(private val context: Context) {
             val newOrder = getPluginOrder().filter { it != pluginId }
             setPluginOrder(newOrder)
         } catch (_: Exception) {
+        }
+    }
+
+    fun uninstallPlugin(pluginId: String) {
+        if (pluginId.startsWith("plugin_custom_rest_")) {
+            deleteCustomPlugin(pluginId)
+        } else {
+            HubModuleManager.getInstance(context).uninstallModule(pluginId)
         }
     }
 
@@ -213,7 +233,23 @@ class HubPluginRegistry(private val context: Context) {
         refreshCards()
     }
 
-    fun refreshCards(scope: CoroutineScope = CoroutineScope(Dispatchers.IO)) {
+    fun dismissCard(pluginId: String) {
+        _dismissedCardIds.value = _dismissedCardIds.value + pluginId
+    }
+
+    fun restoreDismissedCards() {
+        if (_dismissedCardIds.value.isNotEmpty()) {
+            _dismissedCardIds.value = emptySet()
+        }
+    }
+
+    fun refreshCards(
+        clearDismissed: Boolean = true,
+        scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    ) {
+        if (clearDismissed) {
+            _dismissedCardIds.value = emptySet()
+        }
         scope.launch {
             _isRefreshing.value = true
             val orderedPlugins = getAllPlugins().filter { isPluginEnabled(it.id) }

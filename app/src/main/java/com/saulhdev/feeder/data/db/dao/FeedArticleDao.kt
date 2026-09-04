@@ -120,6 +120,19 @@ interface FeedArticleDao {
         minKeptPubDate: Long,
     ): List<String>
 
+    @Query(
+        """
+        SELECT uuid FROM Article
+        WHERE feedId = :feedId AND pinned = 0 AND bookmarked = 0
+        ORDER BY pubDateV2 DESC, primarySortTime DESC
+        LIMIT -1 OFFSET :keepCount
+        """
+    )
+    suspend fun getExcessArticlesToBeCleaned(
+        feedId: Long,
+        keepCount: Int
+    ): List<String>
+
     @Query("SELECT * FROM ArticleIdWithLink")
     fun getArticleIdLinks(): Flow<List<ArticleIdWithLink>>
 

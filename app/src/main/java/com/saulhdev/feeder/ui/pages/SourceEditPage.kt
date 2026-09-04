@@ -106,6 +106,7 @@ fun SourceEditPage(
                     requireLink = freshFeed.requireLink,
                     requireImage = freshFeed.requireImage,
                     excludeReplies = freshFeed.excludeReplies,
+                    preferredPackage = freshFeed.preferredPackage,
                 )
                 hasLoaded = true
             }
@@ -367,6 +368,129 @@ fun SourceEditView(
                     index = 4,
                     groupSize = 5
                 )
+            }
+        }
+
+        item {
+            val context = androidx.compose.ui.platform.LocalContext.current
+            val browsers = remember(context) { com.saulhdev.feeder.utils.getInstalledBrowserApps(context) }
+            val currentPkg = editState.value.preferredPackage
+            val currentBrowserName = remember(currentPkg, browsers) {
+                browsers.firstOrNull { it.packageName == currentPkg }?.appName
+                    ?: context.getString(R.string.browser_system_default)
+            }
+            var showBrowserPicker by remember { mutableStateOf(false) }
+
+            androidx.compose.material3.Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp),
+                shape = MaterialTheme.shapes.large,
+                colors = androidx.compose.material3.CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceContainer
+                ),
+                onClick = { showBrowserPicker = true }
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Text(
+                        text = stringResource(id = R.string.source_preferred_browser),
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.SemiBold,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = currentBrowserName,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.primary,
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                    )
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = stringResource(id = R.string.source_preferred_browser_summary),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+
+            if (showBrowserPicker) {
+                Dialog(
+                    onDismissRequest = { showBrowserPicker = false },
+                    properties = DialogProperties(dismissOnBackPress = true, dismissOnClickOutside = true)
+                ) {
+                    androidx.compose.material3.Surface(
+                        shape = MaterialTheme.shapes.extraLarge,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp)
+                        ) {
+                            Text(
+                                text = stringResource(id = R.string.source_preferred_browser),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            browsers.forEach { browser ->
+                                val isSelected = browser.packageName == editState.value.preferredPackage
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 6.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .padding(end = 8.dp)
+                                    ) {
+                                        Text(
+                                            text = browser.appName,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = if (isSelected) androidx.compose.ui.text.font.FontWeight.Bold else androidx.compose.ui.text.font.FontWeight.Normal
+                                        )
+                                        if (browser.packageName.isNotEmpty()) {
+                                            Text(
+                                                text = browser.packageName,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
+                                    }
+                                    androidx.compose.material3.RadioButton(
+                                        selected = isSelected,
+                                        onClick = {
+                                            editState.value = editState.value.copy(preferredPackage = browser.packageName)
+                                            onEdited()
+                                            showBrowserPicker = false
+                                        }
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.End
+                            ) {
+                                androidx.compose.material3.TextButton(
+                                    onClick = { showBrowserPicker = false }
+                                ) {
+                                    Text(stringResource(id = android.R.string.cancel))
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

@@ -469,6 +469,10 @@ class OverlayView(val context: Context) :
     override fun onScroll(f: Float) {
         super.onScroll(f)
 
+        if (f <= 0f) {
+            com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).restoreDismissedCards()
+        }
+
         val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
         val alpha = if (f <= 0f) 0f else prefs.overlayTransparency.getValue()
         val color = (alpha * 255.0f).toInt() shl 24 or (bgColor and 0x00ffffff)

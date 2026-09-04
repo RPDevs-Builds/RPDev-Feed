@@ -130,6 +130,67 @@ fun getHubPlacementOptions(context: Context): Map<String, String> {
     )
 }
 
+data class BrowserAppInfo(
+    val packageName: String,
+    val appName: String,
+    val isDefault: Boolean = false
+)
+
+fun getCachedLinksLimitOptions(context: Context): Map<String, String> {
+    return mapOf(
+        "25" to "25 links",
+        "50" to "50 links",
+        "100" to "100 links",
+        "250" to "250 links",
+        "500" to "500 links",
+        "1000" to "1000 links",
+        "unlimited" to "Unlimited (keep all)"
+    )
+}
+
+fun getInstalledBrowserApps(context: Context): List<BrowserAppInfo> {
+    val pm = context.packageManager
+    val intent = android.content.Intent(
+        android.content.Intent.ACTION_VIEW,
+        android.net.Uri.parse("https://example.com")
+    )
+    val flags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+        android.content.pm.PackageManager.MATCH_ALL
+    } else {
+        android.content.pm.PackageManager.MATCH_DEFAULT_ONLY
+    }
+    val resolveInfos = pm.queryIntentActivities(intent, flags)
+    val defaultResolve = pm.resolveActivity(intent, android.content.pm.PackageManager.MATCH_DEFAULT_ONLY)
+    val defaultPkg = defaultResolve?.activityInfo?.packageName
+
+    val list = mutableListOf<BrowserAppInfo>()
+    list.add(
+        BrowserAppInfo(
+            packageName = "",
+            appName = context.getString(R.string.browser_system_default),
+            isDefault = true
+        )
+    )
+
+    val seen = mutableSetOf<String>()
+    seen.add(context.packageName)
+
+    for (info in resolveInfos) {
+        val pkg = info.activityInfo.packageName
+        if (seen.add(pkg)) {
+            val label = info.loadLabel(pm).toString()
+            list.add(
+                BrowserAppInfo(
+                    packageName = pkg,
+                    appName = label,
+                    isDefault = pkg == defaultPkg
+                )
+            )
+        }
+    }
+    return list
+}
+
 /**
  * Ensures a url is valid, having a scheme and everything. It turns 'google.com' into 'http://google.com' for example.
  */

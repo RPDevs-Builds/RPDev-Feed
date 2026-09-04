@@ -32,4 +32,5 @@ data class SourceEditViewState(
     val requireLink: Boolean = false,
     val requireImage: Boolean = false,
     val excludeReplies: Boolean = true,
+    val preferredPackage: String = "",
 )

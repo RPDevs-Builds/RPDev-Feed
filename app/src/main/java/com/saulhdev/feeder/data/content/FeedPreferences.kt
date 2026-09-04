@@ -157,6 +157,16 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getItemsPerFeed()
     )
 
+    var cachedLinksLimit = StringSelectionPref(
+        titleId = R.string.pref_cached_links_limit,
+        summaryId = R.string.pref_cached_links_limit_summary,
+        icon = Phosphor.BookBookmark,
+        key = CACHED_LINKS_LIMIT,
+        dataStore = dataStore,
+        defaultValue = "250",
+        entries = com.saulhdev.feeder.utils.getCachedLinksLimitOptions(context)
+    )
+
     var mastodonItemsPerFeed = StringSelectionPref(
         titleId = R.string.pref_mastodon_items_per_feed,
         icon = Phosphor.Hash,
@@ -296,6 +306,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         val SYNC_FREQUENCY = stringPreferencesKey("pref_sync_frequency")
         val SYNC_RANGE = stringPreferencesKey("pref_sync_range")
         val ITEMS_PER_FEED = stringPreferencesKey("pref_items_per_feed")
+        val CACHED_LINKS_LIMIT = stringPreferencesKey("pref_cached_links_limit")
         val MASTODON_ITEMS_PER_FEED = stringPreferencesKey("pref_mastodon_items_per_feed")
         val BLOCKED_WORDS = stringSetPreferencesKey("pref_blocked_words")
         val PLUGINS = stringSetPreferencesKey("pref_enabled_plugins")

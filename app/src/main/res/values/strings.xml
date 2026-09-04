@@ -203,4 +203,20 @@
     <string name="move_up">Move Up</string>
     <string name="move_down">Move Down</string>
     <string name="live_preview">Live Preview</string>
+    <string name="pref_cached_links_limit">Cached links retention limit</string>
+    <string name="pref_cached_links_limit_summary">Maximum cached articles/links to retain per feed in storage</string>
+    <string name="source_preferred_browser">Open Links With</string>
+    <string name="source_preferred_browser_summary">Choose which browser or app opens articles from this source</string>
+    <string name="browser_system_default">System Default / Reader</string>
+    <string name="menu_read_offline">Read Offline</string>
+    <string name="menu_open_in_browser">Open in Browser</string>
+    <string name="menu_open_with">Open With…</string>
+    <string name="menu_copy_link">Copy Link</string>
+    <string name="menu_share_link">Share Link</string>
+    <string name="menu_feed_settings">Source Settings</string>
+    <string name="menu_configure_module">Configure Module</string>
+    <string name="menu_refresh_module">Refresh Module</string>
+    <string name="menu_dismiss_module">Dismiss for Now</string>
+    <string name="menu_hub_settings">Hub Plugins &amp; Settings</string>
+    <string name="link_copied_toast">Link copied to clipboard</string>
 </resources>

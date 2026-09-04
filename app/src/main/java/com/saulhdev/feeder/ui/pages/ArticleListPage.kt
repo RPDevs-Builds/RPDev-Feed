@@ -196,6 +196,7 @@ fun ArticleListPage(
                                             },
                                             onClick = {
                                                 hideMenu()
+                                                com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).restoreDismissedCards()
                                                 scope.launch {
                                                     syncClient.syncAllFeeds()
                                                 }
@@ -301,7 +302,10 @@ fun ArticleListPage(
 
                                 else          -> PullToRefreshLazyColumn(
                                     isRefreshing = state.isSyncing,
-                                    onRefresh = { syncClient.syncAllFeeds() },
+                                    onRefresh = {
+                                        com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).restoreDismissedCards()
+                                        syncClient.syncAllFeeds()
+                                    },
                                     listState = listState,
                                     content = {
                                         item(key = "hub_dashboard") {
@@ -314,8 +318,9 @@ fun ArticleListPage(
                                                     viewModel.bookmarkArticle(item.id, it)
                                                 },
                                             ) {
-                                                if (prefs.openInBrowser.getValue()) {
-                                                    context.launchView(item.link)
+                                                val prefPkg = item.feed.preferredPackage.takeIf { it.isNotBlank() }
+                                                if (prefs.openInBrowser.getValue() || prefPkg != null) {
+                                                    context.launchView(item.link, prefPkg)
                                                 } else {
                                                     if (prefs.offlineReader.getValue()) {
                                                         scope.launch {
@@ -327,7 +332,8 @@ fun ArticleListPage(
                                                     } else {
                                                         openLinkInCustomTab(
                                                             context,
-                                                            item.link
+                                                            item.link,
+                                                            prefPkg
                                                         )
                                                     }
                                                 }

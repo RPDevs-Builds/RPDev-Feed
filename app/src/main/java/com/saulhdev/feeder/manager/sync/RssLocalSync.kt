@@ -231,46 +231,81 @@ private suspend fun syncFeed(
         period = DateTimePeriod(days = days),
         timeZone = TimeZone.currentSystemDefault()
     ).toEpochMilliseconds()
-    val articles =
-        items?.reversed()
-            ?.map { item ->
-                val itemGuid = (item.id ?: item.url).toString()
-                val article = (articleRepo.getArticleByGuid(
-                    guid = itemGuid,
-                    feedId = syncedFeed.id
-                ) ?: Article(firstSyncedTime = downloadTime))
-                    .updateFromParsedEntry(item, itemGuid, feed, syncedFeed.id)
-                article to (item.content_html ?: item.content_text ?: "")
-            }
-            ?.filter { (article, _) ->
-                article.pubDate !in 1..<minKeptPubDate
-            }
-            ?.filterBlockedWords() ?: emptyList()
 
-    Log.d(TAG, "Prepared ${articles.size} articles for ${feedSql.title}")
+    val articlesToUpsert = mutableListOf<Pair<Article, String>>()
+    val rawArticles = items?.take(maxFeedItemCount)?.reversed() ?: emptyList()
+
+    for (item in rawArticles) {
+        val itemGuid = (item.id ?: item.url).toString()
+        val existingArticle = articleRepo.getArticleByGuid(
+            guid = itemGuid,
+            feedId = syncedFeed.id
+        )
+        val text = item.content_html ?: item.content_text ?: ""
+
+        val updatedArticle = (existingArticle ?: Article(firstSyncedTime = downloadTime))
+            .updateFromParsedEntry(item, itemGuid, feed, syncedFeed.id)
+
+        if (updatedArticle.pubDate in 1..<minKeptPubDate) {
+            continue
+        }
+
+        // Incremental update check: skip unchanged records to save disk & DB I/O
+        if (existingArticle != null &&
+            existingArticle.title == updatedArticle.title &&
+            existingArticle.pubDate == updatedArticle.pubDate &&
+            existingArticle.link == updatedArticle.link &&
+            existingArticle.plainSnippet == updatedArticle.plainSnippet &&
+            blobFile(itemId = existingArticle.uuid, filesDir = filesDir).exists()
+        ) {
+            continue
+        }
+
+        articlesToUpsert.add(updatedArticle to text)
+    }
+
+    val filteredArticles = articlesToUpsert.filterBlockedWords()
+    Log.d(TAG, "Prepared ${filteredArticles.size} new/modified articles for ${feedSql.title}")
 
     feedsRepo.updateSource(
         syncedFeed.copy(
             title = syncedFeed.title,
             feedImage = feed.icon?.let { sloppyLinkToStrictURLNoThrows(it) }
                 ?: syncedFeed.feedImage
-        ))
+        )
+    )
 
-    articleRepo.updateOrInsertArticle(articles) { article, text ->
-        withContext(Dispatchers.IO) {
-            blobOutputStream(article.uuid, filesDir).bufferedWriter().use {
-                it.write(text)
+    if (filteredArticles.isNotEmpty()) {
+        articleRepo.updateOrInsertArticle(filteredArticles) { article, text ->
+            withContext(Dispatchers.IO) {
+                try {
+                    blobOutputStream(article.uuid, filesDir).bufferedWriter().use {
+                        it.write(text)
+                    }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to write article blob for ${article.uuid}", e)
+                }
             }
         }
     }
 
-    val ids = articleRepo.getItemsToBeCleanedFromFeed(
+    val dateCleanupIds = articleRepo.getItemsToBeCleanedFromFeed(
         feedId = syncedFeed.id,
         minKeptPubDate = minKeptPubDate
     )
+    val maxCachedStr = prefs.cachedLinksLimit.getValue()
+    val excessCleanupIds = if (maxCachedStr != "unlimited") {
+        val maxCachedCount = maxCachedStr.toIntOrNull() ?: 250
+        articleRepo.getExcessArticlesToBeCleaned(
+            feedId = syncedFeed.id,
+            keepCount = maxCachedCount
+        )
+    } else emptyList()
+
+    val ids = (dateCleanupIds + excessCleanupIds).distinct()
     Log.d(
         TAG,
-        "Cleanup ${feedSql.title}: days=$days cutoff=$minKeptPubDate deleting=${ids.size}"
+        "Cleanup ${feedSql.title}: days=$days cutoff=$minKeptPubDate cachedLimit=$maxCachedStr deleting=${ids.size}"
     )
 
     for (id in ids) {
@@ -326,12 +361,11 @@ internal suspend fun feedsToSync(
         }
 
         feedId == ID_ALL -> {
-            Log.d(TAG, "Checking all feeds  = $forceNetwork")
+            Log.d(TAG, "Syncing all feeds (forceNetwork=$forceNetwork)")
             if (forceNetwork) {
-                repository.getAllSources()
-
+                repository.getAllSources().filter { it.isEnabled }
             } else {
-                repository.loadFeedIfStale(ID_ALL, staleTime)
+                repository.loadFeedIfStale(feedId = ID_ALL, staleTime = staleTime)
             }
         }
 
@@ -339,14 +373,19 @@ internal suspend fun feedsToSync(
             repository.loadFeedsByTag(tag)
         }
 
-        else -> repository.getAllSources()
+        else -> {
+            if (forceNetwork) {
+                repository.getAllSources().filter { it.isEnabled }
+            } else {
+                repository.loadFeedIfStale(feedId = ID_ALL, staleTime = staleTime)
+            }
+        }
     }
 
     return if (tag.isNotEmpty() && feedId == ID_ALL) {
         Log.d(TAG, "Filtering by tag: $tag")
         sources.filter { it.tag.contains(tag) }
     } else {
-        Log.d(TAG, "No tag filtering applied $sources")
         sources
     }
 }

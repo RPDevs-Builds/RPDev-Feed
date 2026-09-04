@@ -77,6 +77,7 @@ class SourceEditViewModel : NeoViewModel() {
                 requireLink = state.requireLink,
                 requireImage = state.requireImage,
                 excludeReplies = state.excludeReplies,
+                preferredPackage = state.preferredPackage,
             ),
             resync = needsResync
         )
@@ -104,6 +105,7 @@ class SourceEditViewModel : NeoViewModel() {
             requireLink = feed.requireLink,
             requireImage = feed.requireImage,
             excludeReplies = feed.excludeReplies,
+            preferredPackage = feed.preferredPackage,
         )
     }.stateIn(
         viewModelScope,

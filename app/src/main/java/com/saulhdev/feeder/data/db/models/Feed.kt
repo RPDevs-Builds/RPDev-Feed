@@ -58,4 +58,6 @@ data class Feed(
     val requireImage: Boolean = false,
     @ColumnInfo(defaultValue = "1")
     val excludeReplies: Boolean = true,
+    @ColumnInfo(defaultValue = "")
+    val preferredPackage: String = "",
 )

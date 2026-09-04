@@ -31,7 +31,8 @@ import com.saulhdev.feeder.utils.extensions.safeStartActivity
 
 fun openLinkInCustomTab(
     context: Context,
-    link: String
+    link: String,
+    packageName: String? = null
 ): Boolean {
     @ColorInt val colorPrimaryLight =
         ContextCompat.getColor(context, R.color.md_theme_primary)
@@ -54,10 +55,13 @@ fun openLinkInCustomTab(
 
         val targetIntent = customTabsIntent.intent.apply {
             data = Uri.parse(link)
+            if (!packageName.isNullOrBlank()) {
+                setPackage(packageName)
+            }
         }
         context.safeStartActivity(targetIntent)
     } catch (e: ActivityNotFoundException) {
-        Toast.makeText(context, R.string.app_name, Toast.LENGTH_SHORT).show()
+        Toast.makeText(context, R.string.no_activity_for_link, Toast.LENGTH_SHORT).show()
         return false
     } catch (e: Exception) {
         android.util.Log.e("openLinkInCustomTab", "Failed to open link: ${e.message}")

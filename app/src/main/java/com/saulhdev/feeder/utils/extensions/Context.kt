@@ -68,11 +68,15 @@ private fun Context.restartFeed() {
     exitProcess(0)
 }
 
-fun Context.launchView(url: String) {
+fun Context.launchView(url: String, packageName: String? = null) {
     val intent = Intent(
         Intent.ACTION_VIEW,
         url.toUri()
-    )
+    ).apply {
+        if (!packageName.isNullOrBlank()) {
+            setPackage(packageName)
+        }
+    }
     safeStartActivity(intent)
 }
 

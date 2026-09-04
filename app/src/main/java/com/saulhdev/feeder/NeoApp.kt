@@ -118,6 +118,7 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         )
         wm.pruneWork()
         onAppStarted()
+        com.saulhdev.feeder.manager.sync.scheduleHourlyPeriodicSync(this)
         applicationCoroutineScope.launch(Dispatchers.IO) {
             val repo: SourcesRepository by inject(SourcesRepository::class.java)
             repo.seedDefaultSourcesIfEmpty()

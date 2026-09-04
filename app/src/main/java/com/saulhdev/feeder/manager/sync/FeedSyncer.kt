@@ -10,16 +10,19 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.work.Constraints
 import androidx.work.CoroutineWorker
+import androidx.work.ExistingPeriodicWorkPolicy
 import androidx.work.ExistingWorkPolicy
 import androidx.work.ForegroundInfo
 import androidx.work.NetworkType
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.OutOfQuotaPolicy
+import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
 import androidx.work.workDataOf
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
+import com.saulhdev.feeder.data.db.ID_ALL
 import com.saulhdev.feeder.data.db.ID_UNSET
 import org.koin.java.KoinJavaComponent.inject
 import java.util.concurrent.TimeUnit
@@ -141,4 +144,40 @@ fun requestFeedSync(
         ExistingWorkPolicy.REPLACE,
         workRequest
     )
+}
+
+fun scheduleHourlyPeriodicSync(context: Context) {
+    try {
+        val workManager = WorkManager.getInstance(context)
+        val prefs: FeedPreferences by inject(FeedPreferences::class.java)
+        val constraints = Constraints.Builder()
+            .setRequiredNetworkType(
+                if (prefs.syncOnlyOnWifi.getValue()) NetworkType.UNMETERED else NetworkType.CONNECTED
+            )
+            .build()
+
+        val periodicRequest = PeriodicWorkRequestBuilder<FeedSyncer>(
+            1, TimeUnit.HOURS,
+            15, TimeUnit.MINUTES
+        )
+            .addTag("FeedSyncerHourly")
+            .setConstraints(constraints)
+            .setInputData(
+                workDataOf(
+                    "feed_id" to ID_ALL,
+                    "force_network" to false,
+                    "min_feed_age_minutes" to 30
+                )
+            )
+            .build()
+
+        workManager.enqueueUniquePeriodicWork(
+            "feeder_hourly_periodic_sync",
+            ExistingPeriodicWorkPolicy.KEEP,
+            periodicRequest
+        )
+        Log.d(TAG, "Hourly periodic feed sync scheduled (pulling up to 10 sources per hour)")
+    } catch (e: Exception) {
+        Log.e(TAG, "Failed to schedule hourly periodic sync", e)
+    }
 }

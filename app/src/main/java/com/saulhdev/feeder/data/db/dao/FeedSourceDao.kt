@@ -104,6 +104,26 @@ interface FeedSourceDao {
 
     @Query(
         """
+        SELECT * FROM Feeds
+        WHERE isEnabled = 1
+        ORDER BY CASE WHEN lastSync IS NULL THEN 0 ELSE 1 END, lastSync ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun loadStaleFeedsBatch(limit: Int = 10): List<Feed>
+
+    @Query(
+        """
+        SELECT * FROM Feeds
+        WHERE isEnabled = 1 AND (lastSync IS NULL OR lastSync < :staleTime)
+        ORDER BY CASE WHEN lastSync IS NULL THEN 0 ELSE 1 END, lastSync ASC
+        LIMIT :limit
+        """
+    )
+    suspend fun loadStaleFeedsBatchIfOlderThan(staleTime: Long, limit: Int = 10): List<Feed>
+
+    @Query(
+        """
             UPDATE feeds
             SET currentlySyncing = :syncing
             WHERE id IS :feedId

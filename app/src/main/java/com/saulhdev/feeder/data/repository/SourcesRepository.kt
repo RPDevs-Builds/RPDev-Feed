@@ -126,6 +126,14 @@ class SourcesRepository(db: NeoFeedDb) {
             feedsDao.loadFeedIfStale(feedId, staleTime)?.let { listOf(it) } ?: emptyList()
     }
 
+    suspend fun loadStaleFeedsBatch(limit: Int = 10): List<Feed> = withContext(jcc) {
+        feedsDao.loadStaleFeedsBatch(limit)
+    }
+
+    suspend fun loadStaleFeedsBatchIfOlderThan(staleTime: Long, limit: Int = 10): List<Feed> = withContext(jcc) {
+        feedsDao.loadStaleFeedsBatchIfOlderThan(staleTime, limit)
+    }
+
     suspend fun getAllTags(): List<String> {
         return feedsDao.getAllTags()
     }

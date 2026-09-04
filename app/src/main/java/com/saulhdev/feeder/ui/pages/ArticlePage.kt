@@ -86,20 +86,22 @@ fun ArticlePage(
         derivedStateOf { state?.source?.fullTextByDefault ?: false }
     }
 
-    val title by remember { derivedStateOf { state?.article?.title ?: "Neo Feed" } }
-    val currentUrl by remember { derivedStateOf { state?.article?.link ?: "Neo Feed" } }
+    val title by remember { derivedStateOf { state?.article?.title ?: "RPDev Feed" } }
+    val currentUrl by remember { derivedStateOf { state?.article?.link ?: "RPDev Feed" } }
     val subTitle by remember {
         derivedStateOf {
-            (if (currentUrl != "Neo Feed") Uri.parse(currentUrl).host else null)
+            (if (currentUrl != "RPDev Feed") Uri.parse(currentUrl).host else null)
                 ?: state?.source?.title
-                ?: "Neo Feed"
+                ?: "RPDev Feed"
         }
     }
-    val feedTitle by remember { derivedStateOf { state?.source?.title ?: "Neo Feed" } }
+    val feedTitle by remember { derivedStateOf { state?.source?.title ?: "RPDev Feed" } }
 
     val navController = rememberNavController()
-    BackHandler(onDismiss == null) {
-        if (navController.currentBackStackEntry?.destination?.route == null) {
+    BackHandler(enabled = true) {
+        if (onDismiss != null) {
+            onDismiss()
+        } else if (navController.currentBackStackEntry?.destination?.route == null) {
             activity?.finish()
         } else {
             navController.popBackStack()
@@ -141,7 +143,7 @@ fun ArticlePage(
         titleSize = 16.sp,
         subTitle = subTitle,
         showBackButton = true,
-        onBackAction = onDismiss,
+        onBackAction = { onDismiss?.invoke() ?: activity?.finish() },
         actions = {
             RoundButton(
                 icon = Phosphor.ArrowSquareOut,
@@ -192,9 +194,9 @@ fun ArticlePage(
                     .fillMaxSize()
                     .padding(
                         top = paddingValues.calculateTopPadding(),
-                        start = 4.dp,
-                        end = 4.dp,
-                        bottom = paddingValues.calculateBottomPadding() + 8.dp
+                        start = 12.dp,
+                        end = 12.dp,
+                        bottom = paddingValues.calculateBottomPadding() + 16.dp
                     ),
             ) {
                 item {
@@ -204,6 +206,7 @@ fun ArticlePage(
                             style = MaterialTheme.typography.headlineMedium,
                             modifier = Modifier
                                 .fillMaxWidth()
+                                .padding(top = 8.dp)
                         )
                     }
                     Spacer(modifier = Modifier.height(8.dp))
@@ -231,7 +234,8 @@ fun ArticlePage(
                         WithBidiDeterminedLayoutDirection(paragraph = authorDate) {
                             Text(
                                 text = authorDate,
-                                style = MaterialTheme.typography.titleMedium,
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier
                                     .fillMaxWidth()
                             )
@@ -240,35 +244,43 @@ fun ArticlePage(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                if (showFullArticle) {
-                    if (blobFullFile(articleId, context.filesDir).isFile) {
-                        blobFullInputStream(articleId, context.filesDir).use {
-                            htmlFormattedText(
-                                inputStream = it,
-                                baseUrl = state?.article?.link ?: "",
-                                imagePlaceholder = R.drawable.placeholder_image_article_day,
-                                onLinkClick = context::launchView
-                            )
-                        }
-                    } else {
-                        item {
-                            NotFoundView()
-                        }
+                val fallbackContent = state?.article?.description?.takeIf { it.isNotBlank() }
+                    ?: state?.article?.plainSnippet?.takeIf { it.isNotBlank() }
+
+                if (showFullArticle && blobFullFile(articleId, context.filesDir).isFile) {
+                    blobFullInputStream(articleId, context.filesDir).use {
+                        htmlFormattedText(
+                            inputStream = it,
+                            baseUrl = state?.article?.link ?: "",
+                            imagePlaceholder = R.drawable.placeholder_image_article_day,
+                            onLinkClick = context::launchView
+                        )
+                    }
+                } else if (blobFile(articleId, context.filesDir).isFile) {
+                    blobInputStream(articleId, context.filesDir).use {
+                        htmlFormattedText(
+                            inputStream = it,
+                            baseUrl = state?.article?.link ?: "",
+                            imagePlaceholder = R.drawable.placeholder_image_article_day,
+                            onLinkClick = context::launchView
+                        )
+                    }
+                } else if (!fallbackContent.isNullOrBlank()) {
+                    java.io.ByteArrayInputStream(fallbackContent.toByteArray()).use {
+                        htmlFormattedText(
+                            inputStream = it,
+                            baseUrl = state?.article?.link ?: "",
+                            imagePlaceholder = R.drawable.placeholder_image_article_day,
+                            onLinkClick = context::launchView
+                        )
                     }
                 } else {
-                    if (blobFile(articleId, context.filesDir).isFile) {
-                        blobInputStream(articleId, context.filesDir).use {
-                            htmlFormattedText(
-                                inputStream = it,
-                                baseUrl = state?.article?.link ?: "",
-                                imagePlaceholder = R.drawable.placeholder_image_article_day,
-                                onLinkClick = context::launchView
-                            )
-                        }
-                    } else {
-                        item {
-                            NotFoundView()
-                        }
+                    item {
+                        NotFoundView(onOpenInBrowser = {
+                            if (currentUrl.isNotBlank() && currentUrl != "RPDev Feed") {
+                                context.launchView(currentUrl)
+                            }
+                        })
                     }
                 }
             }
@@ -277,8 +289,23 @@ fun ArticlePage(
 }
 
 @Composable
-fun NotFoundView() {
-    Column(modifier = Modifier.padding(16.dp)) {
-        Text(text = stringResource(id = R.string.article_not_found))
+fun NotFoundView(onOpenInBrowser: (() -> Unit)? = null) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(24.dp),
+        horizontalAlignment = androidx.compose.ui.Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(id = R.string.article_not_found),
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        if (onOpenInBrowser != null) {
+            Spacer(modifier = Modifier.height(12.dp))
+            androidx.compose.material3.OutlinedButton(onClick = onOpenInBrowser) {
+                Text("Open in Browser")
+            }
+        }
     }
 }

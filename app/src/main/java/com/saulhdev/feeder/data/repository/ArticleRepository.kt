@@ -118,6 +118,13 @@ class ArticleRepository(db: NeoFeedDb) {
         )
     }
 
+    suspend fun getExcessArticlesToBeCleaned(feedId: Long, keepCount: Int) = withContext(jcc) {
+        articlesDao.getExcessArticlesToBeCleaned(
+            feedId = feedId,
+            keepCount = keepCount
+        )
+    }
+
     fun getFeedsItemsWithDefaultFullTextParse(): Flow<List<ArticleIdWithLink>> =
         articlesDao.getArticleIdLinks()
             .flowOn(cc)
