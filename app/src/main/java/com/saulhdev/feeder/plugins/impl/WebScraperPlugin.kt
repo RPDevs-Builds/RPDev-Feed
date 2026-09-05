@@ -73,12 +73,25 @@ class WebScraperPlugin(
         )
     )
 
+    private fun isValidHttpUrl(url: String): Boolean {
+        return try {
+            val uri = java.net.URI(url)
+            val scheme = uri.scheme?.lowercase()
+            (scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override suspend fun fetchCardData(
         context: Context,
         config: Map<String, String>
     ): Result<HubCardData> = withContext(Dispatchers.IO) {
         val targetUrl = config["target_url"]?.trim()?.takeIf { it.isNotBlank() }
             ?: return@withContext Result.failure(IllegalArgumentException("Empty Target URL"))
+        if (!isValidHttpUrl(targetUrl)) {
+            return@withContext Result.failure(IllegalArgumentException("Only HTTP/HTTPS URLs are supported: $targetUrl"))
+        }
         val rawKeywords = config["keywords"] ?: ""
         val cssSelector = config["css_selector"]?.trim() ?: ""
         val cardTitle = config["card_title"]?.trim()?.takeIf { it.isNotBlank() } ?: "Web Monitor"
@@ -99,7 +112,27 @@ class WebScraperPlugin(
                 return@withContext Result.failure(Exception("HTTP ${response.code}"))
             }
 
-            val html = response.body?.string() ?: ""
+            val maxResponseBytes = 2 * 1024 * 1024L // 2MB limit
+            val contentLength = response.header("Content-Length")?.toLongOrNull()
+            if (contentLength != null && contentLength > maxResponseBytes) {
+                response.close()
+                return@withContext Result.failure(Exception("Response exceeds 2MB limit: ${contentLength} bytes"))
+            }
+
+            val html = response.body?.byteStream()?.use { stream ->
+                val buffer = ByteArray(8192)
+                val out = java.io.ByteArrayOutputStream()
+                var totalBytes = 0L
+                var read: Int
+                while (stream.read(buffer).also { read = it } != -1) {
+                    totalBytes += read
+                    if (totalBytes > maxResponseBytes) {
+                        break
+                    }
+                    out.write(buffer, 0, read)
+                }
+                out.toString("UTF-8")
+            } ?: ""
             val doc = Jsoup.parse(html, targetUrl)
             val pageTitle = doc.title().takeIf { it.isNotBlank() } ?: targetUrl
 
@@ -152,7 +185,7 @@ class WebScraperPlugin(
                                 title = text,
                                 subtitle = element.tagName().uppercase(),
                                 tag = matchingKw ?: "Snippet",
-                                clickUrl = element.attr("abs:href").takeIf { it.isNotBlank() } ?: targetUrl
+                                clickUrl = element.attr("abs:href").takeIf { it.isNotBlank() && isValidHttpUrl(it) } ?: targetUrl
                             )
                         )
                         snippetCount++

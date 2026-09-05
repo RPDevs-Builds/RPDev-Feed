@@ -36,3 +36,34 @@
 -dontwarn org.openjsse.javax.net.ssl.SSLSocket
 -dontwarn org.openjsse.net.ssl.OpenJSSE
 -dontwarn org.slf4j.impl.StaticLoggerBinder
+
+# ===== kotlinx.serialization =====
+-keepattributes *Annotation*, InnerClasses
+-dontnote kotlinx.serialization.AnnotationsKt
+
+-keepclassmembers class kotlinx.serialization.json.** {
+    *** Companion;
+}
+-keepclasseswithmembers class kotlinx.serialization.json.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep all @Serializable data classes and their serializers
+-keep,includedescriptorclasses class com.saulhdev.feeder.plugins.models.**$$serializer { *; }
+-keepclassmembers class com.saulhdev.feeder.plugins.models.** {
+    *** Companion;
+    *** serializer(...);
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.saulhdev.feeder.plugins.models.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}
+
+# Keep the sealed class hierarchy and models
+-keep class com.saulhdev.feeder.plugins.models.HubCardData { *; }
+-keep class com.saulhdev.feeder.plugins.models.HubCardData$* { *; }
+-keep class com.saulhdev.feeder.plugins.models.HubChip { *; }
+-keep class com.saulhdev.feeder.plugins.models.HubTimelineItem { *; }
+-keep class com.saulhdev.feeder.plugins.models.HubAction { *; }
+-keep class com.saulhdev.feeder.plugins.CatalogModule { *; }
+-keep class com.saulhdev.feeder.plugins.PluginConfigField { *; }

@@ -58,6 +58,9 @@ import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import org.koin.core.component.KoinComponent
@@ -79,8 +82,9 @@ class OverlayView(val context: Context) :
     override val savedStateRegistry: SavedStateRegistry get() = savedStateRegistryController.savedStateRegistry
 
     private lateinit var themeHolder: OverlayThemeHolder
-    private val syncScope = CoroutineScope(Dispatchers.IO) + CoroutineName("NeoFeedSync")
-    private val mainScope = CoroutineScope(Dispatchers.Main)
+    private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineName("NeoFeedSync"))
+    private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private var bookmarkCollectorJob: Job? = null
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
     private val articles: SyncRestClient by inject(SyncRestClient::class.java)
     val prefs: FeedPreferences by inject()
@@ -386,7 +390,8 @@ class OverlayView(val context: Context) :
 
         updateToggleColor(toggleButton, bookmarkVisible)
         toggleButton.setOnClickListener {
-            mainScope.launch {
+            bookmarkCollectorJob?.cancel()
+            bookmarkCollectorJob = mainScope.launch {
                 if (bookmarkVisible) {
                     bookmarkVisible = false
                     toggleButton.isChecked = bookmarkVisible
@@ -460,6 +465,9 @@ class OverlayView(val context: Context) :
             context.unregisterReceiver(closeSystemDialogsReceiver)
         } catch (_: Exception) {
         }
+        syncScope.cancel()
+        mainScope.cancel()
+        bookmarkCollectorJob?.cancel()
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         _viewModelStore.clear()
         super.onDestroy()

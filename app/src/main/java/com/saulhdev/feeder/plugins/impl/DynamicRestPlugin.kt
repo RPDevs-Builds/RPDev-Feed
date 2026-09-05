@@ -66,12 +66,25 @@ class DynamicRestPlugin(
         )
     )
 
+    private fun isValidHttpUrl(url: String): Boolean {
+        return try {
+            val uri = java.net.URI(url)
+            val scheme = uri.scheme?.lowercase()
+            (scheme == "http" || scheme == "https") && !uri.host.isNullOrBlank()
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     override suspend fun fetchCardData(
         context: Context,
         config: Map<String, String>
     ): Result<HubCardData> = withContext(Dispatchers.IO) {
-        val url = config["endpoint_url"]?.takeIf { it.isNotBlank() }
+        val url = config["endpoint_url"]?.trim()?.takeIf { it.isNotBlank() }
             ?: return@withContext Result.failure(IllegalArgumentException("Empty Endpoint URL"))
+        if (!isValidHttpUrl(url)) {
+            return@withContext Result.failure(IllegalArgumentException("Only HTTP/HTTPS URLs are supported: $url"))
+        }
         val title = config["card_title"]?.takeIf { it.isNotBlank() } ?: "Custom REST"
         val headersJson = config["headers"]
 

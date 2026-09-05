@@ -18,6 +18,7 @@ import com.saulhdev.feeder.plugins.impl.WebScraperPlugin
 import com.saulhdev.feeder.plugins.models.HubCardData
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -32,6 +33,23 @@ class HubPluginRegistry(private val context: Context) {
 
     private val prefs: SharedPreferences by lazy {
         context.getSharedPreferences("rpdev_hub_plugins", Context.MODE_PRIVATE)
+    }
+
+    private val securePrefs: SharedPreferences by lazy {
+        try {
+            val masterKey = androidx.security.crypto.MasterKey.Builder(context)
+                .setKeyScheme(androidx.security.crypto.MasterKey.KeyScheme.AES256_GCM)
+                .build()
+            androidx.security.crypto.EncryptedSharedPreferences.create(
+                context,
+                "rpdev_hub_plugins_secure",
+                masterKey,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
+                androidx.security.crypto.EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
+            )
+        } catch (_: Exception) {
+            prefs
+        }
     }
 
     private val allKnownBuiltInPlugins: List<HubPlugin> = listOf(
@@ -51,6 +69,8 @@ class HubPluginRegistry(private val context: Context) {
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
+    private var activeRefreshJob: Job? = null
 
     private fun loadCustomPlugins(): List<HubPlugin> {
         val customJsonStr = prefs.getString("custom_plugins_list", "[]") ?: "[]"
@@ -222,7 +242,9 @@ class HubPluginRegistry(private val context: Context) {
     }
 
     fun getPluginConfig(pluginId: String): Map<String, String> {
-        val jsonStr = prefs.getString("plugin_config_$pluginId", "{}") ?: "{}"
+        val jsonStr = securePrefs.getString("plugin_config_$pluginId", null)
+            ?: prefs.getString("plugin_config_$pluginId", "{}")
+            ?: "{}"
         val map = mutableMapOf<String, String>()
         try {
             val json = JSONObject(jsonStr)
@@ -238,7 +260,10 @@ class HubPluginRegistry(private val context: Context) {
 
     fun savePluginConfig(pluginId: String, config: Map<String, String>) {
         val json = JSONObject(config)
-        prefs.edit().putString("plugin_config_$pluginId", json.toString()).apply()
+        securePrefs.edit().putString("plugin_config_$pluginId", json.toString()).apply()
+        if (securePrefs !== prefs) {
+            prefs.edit().remove("plugin_config_$pluginId").apply()
+        }
         refreshCards()
     }
 
@@ -259,21 +284,28 @@ class HubPluginRegistry(private val context: Context) {
         if (clearDismissed) {
             _dismissedCardIds.value = emptySet()
         }
-        scope.launch {
+        activeRefreshJob?.cancel()
+        activeRefreshJob = scope.launch {
             _isRefreshing.value = true
-            val orderedPlugins = getAllPlugins().filter { isPluginEnabled(it.id) }
+            try {
+                val orderedPlugins = getAllPlugins().filter { isPluginEnabled(it.id) }
 
-            val deferredResults = orderedPlugins.map { plugin ->
-                async(Dispatchers.IO) {
-                    val config = getPluginConfig(plugin.id)
-                    plugin.fetchCardData(context, config).getOrNull()
+                val deferredResults = orderedPlugins.map { plugin ->
+                    async(Dispatchers.IO) {
+                        val config = getPluginConfig(plugin.id)
+                        plugin.fetchCardData(context, config).getOrNull()
+                    }
                 }
-            }
 
-            val cards = deferredResults.awaitAll().filterNotNull()
-            withContext(Dispatchers.Main) {
-                _cardsFlow.value = cards
-                _isRefreshing.value = false
+                val cards = deferredResults.awaitAll().filterNotNull()
+                withContext(Dispatchers.Main) {
+                    _cardsFlow.value = cards
+                    _isRefreshing.value = false
+                }
+            } finally {
+                withContext(Dispatchers.Main) {
+                    _isRefreshing.value = false
+                }
             }
         }
     }

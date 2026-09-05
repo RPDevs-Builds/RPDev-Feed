@@ -33,12 +33,12 @@ class SensorsPlugin : HubPlugin {
         val mem = telemetry.memory
         val storage = telemetry.storage
 
-        val freeStorageGb = storage.availableBytes / (1024 * 1024 * 1024)
-        val totalStorageGb = storage.totalBytes / (1024 * 1024 * 1024)
-        val usedStorageGb = totalStorageGb - freeStorageGb
+        val freeStorageGb = String.format(java.util.Locale.US, "%.1f", storage.availableBytes / (1024.0 * 1024.0 * 1024.0))
+        val totalStorageGb = String.format(java.util.Locale.US, "%.1f", storage.totalBytes / (1024.0 * 1024.0 * 1024.0))
+        val usedStorageGb = String.format(java.util.Locale.US, "%.1f", (storage.totalBytes - storage.availableBytes) / (1024.0 * 1024.0 * 1024.0))
 
-        val availMemMb = mem.availableBytes / (1024 * 1024)
-        val totalMemMb = mem.totalBytes / (1024 * 1024)
+        val availMemMb = mem.availableBytes / (1024L * 1024L)
+        val totalMemMb = mem.totalBytes / (1024L * 1024L)
 
         val chips = listOf(
             HubChip(
@@ -46,7 +46,7 @@ class SensorsPlugin : HubPlugin {
                 colorHex = if (bat.levelPercent <= 20) "#f44336" else "#4caf50"
             ),
             HubChip(
-                label = "🌡️ ${String.format("%.1f", bat.temperatureCelsius)}°C",
+                label = "🌡️ ${String.format(java.util.Locale.US, "%.1f", bat.temperatureCelsius)}°C",
                 colorHex = if (bat.temperatureCelsius >= 45.0) "#f44336" else "#ff9800"
             ),
             HubChip(

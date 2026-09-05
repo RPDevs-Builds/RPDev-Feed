@@ -26,7 +26,7 @@ import java.util.concurrent.TimeUnit
 
 class GitHubPlugin : HubPlugin {
 
-    override val id: String = "plugin_github_pulse"
+    override val id: String = "plugin_github"
     override val name: String = "GitHub Pulse"
     override val description: String = "Live GitHub PR review requests, workflow CI runs, assigned issues, and commit activity."
     override val category: PluginCategory = PluginCategory.DEVELOPER

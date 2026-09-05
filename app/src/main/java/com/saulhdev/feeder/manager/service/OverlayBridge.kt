@@ -1,6 +1,7 @@
 package com.saulhdev.feeder.manager.service
 
 class OverlayBridge {
+    @Volatile
     private var callback: OverlayBridgeCallback? = null
 
     fun setCallback(callback: OverlayBridgeCallback?) {
