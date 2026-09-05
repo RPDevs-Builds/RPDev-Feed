@@ -112,7 +112,8 @@ class HubModuleManager private constructor(private val context: Context) {
     suspend fun fetchCatalog(forceRefresh: Boolean = false): Result<List<CatalogModule>> = withContext(Dispatchers.IO) {
         _isLoadingCatalog.value = true
         try {
-            val customDomainUrl = "https://repo.feed.iamrp.dev/catalog/modules.json"
+            val customDomainUrl = "https://repo.launcher.iamrp.dev/catalog/modules.json"
+            val cdnFallbackUrl = "https://cdn.iamrp.dev/feed/modules.json"
             val githubRawUrl = "https://raw.githubusercontent.com/RPDevs-Builds/RPDev-Feed-Modules/main/catalog/modules.json"
 
             var responseBody: String? = null
@@ -129,6 +130,21 @@ class HubModuleManager private constructor(private val context: Context) {
                     }
                 }
             } catch (_: Exception) {
+            }
+
+            // Fallback to Sovereign CDN
+            if (responseBody.isNullOrBlank()) {
+                try {
+                    val cdnReq = Request.Builder()
+                        .url(cdnFallbackUrl)
+                        .header("Cache-Control", if (forceRefresh) "no-cache" else "max-age=300")
+                        .build()
+                    httpClient.newCall(cdnReq).execute().use { res ->
+                        if (res.isSuccessful) {
+                            responseBody = res.body?.string()
+                        }
+                    }
+                } catch (_: Exception) {}
             }
 
             // Fallback to GitHub Raw if domain is DNS propagating or unreachable

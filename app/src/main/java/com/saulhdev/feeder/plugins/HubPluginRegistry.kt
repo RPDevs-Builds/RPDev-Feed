@@ -79,7 +79,16 @@ class HubPluginRegistry(private val context: Context) {
         val moduleManager = HubModuleManager.getInstance(context)
         val installedBuiltIn = allKnownBuiltInPlugins.filter { moduleManager.isInstalled(it.id) }
         val custom = loadCustomPlugins().filter { moduleManager.isInstalled(it.id) }
-        val allMap = (installedBuiltIn + custom).associateBy { it.id }
+        val catalogDynamic = moduleManager.catalogModules.value
+            .filter { moduleManager.isInstalled(it.id) && allKnownBuiltInPlugins.none { b -> b.id == it.id } && custom.none { c -> c.id == it.id } }
+            .map { mod ->
+                DynamicRestPlugin(
+                    customId = mod.id,
+                    customName = mod.name,
+                    customDescription = mod.summary
+                )
+            }
+        val allMap = (installedBuiltIn + custom + catalogDynamic).associateBy { it.id }
 
         val order = getPluginOrder()
         val orderedList = mutableListOf<HubPlugin>()
