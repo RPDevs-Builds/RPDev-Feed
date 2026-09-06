@@ -36,6 +36,15 @@ import org.koin.java.KoinJavaComponent.inject
 
 object StoryCardBinder : FeedBinder {
     override fun bind(theme: SparseIntArray?, item: FeedItem, view: View) {
+        bind(theme, item, view, null)
+    }
+
+    fun bind(
+        theme: SparseIntArray?,
+        item: FeedItem,
+        view: View,
+        onDismissStory: ((String) -> Unit)? = null
+    ) {
         val context = view.context
         val content = item.toStoryCardContent()
         val binding = FeedCardStoryLargeBinding.bind(view)
@@ -114,7 +123,7 @@ object StoryCardBinder : FeedBinder {
             }
         }
 
-        binding.root.setOnLongClickListener { anchorView ->
+        val showCardMenu: (View) -> Unit = { anchorView ->
             val popup = DialogMenu(anchorView)
             val menuList = listOf(
                 MenuItem(R.drawable.ic_news, R.string.menu_read_offline, 0, "offline"),
@@ -128,6 +137,7 @@ object StoryCardBinder : FeedBinder {
                 ),
                 MenuItem(R.drawable.ic_bookmarks, R.string.menu_copy_link, 1, "copy"),
                 MenuItem(R.drawable.ic_share, R.string.menu_share_link, 1, "share"),
+                MenuItem(R.drawable.ic_trash, R.string.menu_dismiss_story, 2, "dismiss_story"),
                 MenuItem(R.drawable.ic_gear, R.string.menu_feed_settings, 2, "feed_settings")
             )
 
@@ -170,6 +180,12 @@ object StoryCardBinder : FeedBinder {
                     "share" -> {
                         context.safeShareIntent(content.link, content.title)
                     }
+                    "dismiss_story" -> {
+                        CoroutineScope(Dispatchers.IO).launch {
+                            repository.deleteArticles(listOf(item.id))
+                        }
+                        onDismissStory?.invoke(item.id)
+                    }
                     "feed_settings" -> {
                         context.safeStartActivity(
                             MainActivity.navigateIntent(
@@ -180,7 +196,15 @@ object StoryCardBinder : FeedBinder {
                     }
                 }
             }
+        }
+
+        binding.root.setOnLongClickListener { anchorView ->
+            showCardMenu(anchorView)
             true
+        }
+
+        binding.moreButton.setOnClickListener { anchorView ->
+            showCardMenu(anchorView)
         }
 
         theme ?: return
@@ -196,6 +220,8 @@ object StoryCardBinder : FeedBinder {
         binding.shareButton.iconTint =
             ColorStateList.valueOf(themeCard.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal))
         binding.saveButton.iconTint =
+            ColorStateList.valueOf(themeCard.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal))
+        binding.moreButton.iconTint =
             ColorStateList.valueOf(themeCard.get(CardTheme.Colors.TEXT_COLOR_PRIMARY.ordinal))
     }
 

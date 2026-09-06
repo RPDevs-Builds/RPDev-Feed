@@ -30,21 +30,47 @@ import com.saulhdev.feeder.data.db.models.FeedItem
 import com.saulhdev.feeder.ui.components.hub.HubDashboardSection
 import com.saulhdev.feeder.ui.feed.binders.StoryCardBinder
 
-class FeedAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
+class FeedAdapter(
+    private val onDismissStoryCallback: ((String) -> Unit)? = null
+) : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
     companion object {
         const val VIEW_TYPE_HUB_HEADER = 0
         const val VIEW_TYPE_STORY = 1
     }
 
-    private var list = listOf<FeedItem>()
+    private var list = mutableListOf<FeedItem>()
+    private val dismissedStoryIds = mutableSetOf<String>()
     private lateinit var layoutInflater: LayoutInflater
     private var theme: SparseIntArray? = null
 
     fun replace(new: List<FeedItem>) {
-        if (new != list) {
-            list = new
+        val filtered = new.filter { it.id !in dismissedStoryIds }
+        if (filtered != list) {
+            list = filtered.toMutableList()
             notifyDataSetChanged()
         }
+    }
+
+    fun dismissStory(id: String) {
+        dismissedStoryIds.add(id)
+        val index = list.indexOfFirst { it.id == id }
+        if (index != -1) {
+            list.removeAt(index)
+            notifyItemRemoved(index + 1)
+        }
+        onDismissStoryCallback?.invoke(id)
+    }
+
+    fun dismissStoryAt(adapterPosition: Int) {
+        val listIndex = adapterPosition - 1
+        if (listIndex in 0 until list.size) {
+            val item = list[listIndex]
+            dismissStory(item.id)
+        }
+    }
+
+    fun clearDismissed() {
+        dismissedStoryIds.clear()
     }
 
     fun setTheme(theme: SparseIntArray) {
@@ -77,7 +103,9 @@ class FeedAdapter : RecyclerView.Adapter<RecyclerView.ViewHolder>() {
             holder.bind()
         } else if (holder is FeedViewHolder && position > 0 && position <= list.size) {
             val item = list[position - 1]
-            StoryCardBinder.bind(theme, item, holder.itemView)
+            StoryCardBinder.bind(theme, item, holder.itemView) { storyId ->
+                dismissStory(storyId)
+            }
         }
     }
 

@@ -19,6 +19,7 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.updateLayoutParams
 import androidx.core.view.updatePadding
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.swiperefreshlayout.widget.SwipeRefreshLayout
@@ -30,6 +31,7 @@ import com.saulhdev.feeder.NeoApp
 import com.saulhdev.feeder.R
 import com.saulhdev.feeder.data.content.FeedPreferences
 import com.saulhdev.feeder.data.entity.MenuItem
+import com.saulhdev.feeder.data.repository.ArticleRepository
 import com.saulhdev.feeder.manager.sync.SyncRestClient
 import com.saulhdev.feeder.ui.feed.FeedAdapter
 import com.saulhdev.feeder.ui.navigation.Routes
@@ -87,6 +89,7 @@ class OverlayView(val context: Context) :
     private var bookmarkCollectorJob: Job? = null
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
     private val articles: SyncRestClient by inject(SyncRestClient::class.java)
+    private val articleRepo: ArticleRepository by inject(ArticleRepository::class.java)
     val prefs: FeedPreferences by inject()
 
     var bookmarkVisible = false
@@ -328,14 +331,42 @@ class OverlayView(val context: Context) :
 
         rootView.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh).setOnRefreshListener {
             rootView.findViewById<RecyclerView>(R.id.recycler).recycledViewPool.clear()
+            adapter.clearDismissed()
             refreshNotifications()
         }
 
-        adapter = FeedAdapter()
+        adapter = FeedAdapter { articleId ->
+            syncScope.launch {
+                articleRepo.deleteArticles(listOf(articleId))
+            }
+        }
         recyclerView.apply {
             layoutManager = LinearLayoutManagerWrapper(context, LinearLayoutManager.VERTICAL, false)
             adapter = this@OverlayView.adapter
         }
+
+        val itemTouchHelper = ItemTouchHelper(object : ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+            override fun getSwipeDirs(recyclerView: RecyclerView, viewHolder: RecyclerView.ViewHolder): Int {
+                if (viewHolder is FeedAdapter.FeedViewHolder) {
+                    return ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT
+                }
+                return 0
+            }
+
+            override fun onMove(
+                recyclerView: RecyclerView,
+                viewHolder: RecyclerView.ViewHolder,
+                target: RecyclerView.ViewHolder
+            ): Boolean = false
+
+            override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                val position = viewHolder.bindingAdapterPosition
+                if (position != RecyclerView.NO_POSITION) {
+                    adapter.dismissStoryAt(position)
+                }
+            }
+        })
+        itemTouchHelper.attachToRecyclerView(recyclerView)
 
         recyclerView.addOnScrollListener(object : RecyclerView.OnScrollListener() {
             override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
@@ -477,10 +508,6 @@ class OverlayView(val context: Context) :
     override fun onScroll(f: Float) {
         super.onScroll(f)
 
-        if (f <= 0f) {
-            com.saulhdev.feeder.plugins.HubPluginRegistry.getInstance(context).restoreDismissedCards()
-        }
-
         val bgColor = themeHolder.currentTheme.get(CardTheme.Colors.OVERLAY_BG.ordinal)
         val alpha = if (f <= 0f) 0f else prefs.overlayTransparency.getValue()
         val color = (alpha * 255.0f).toInt() shl 24 or (bgColor and 0x00ffffff)
@@ -505,7 +532,11 @@ class OverlayView(val context: Context) :
     }
 
     override fun applyCompactCard(value: Boolean) {
-        adapter = FeedAdapter()
+        adapter = FeedAdapter { articleId ->
+            syncScope.launch {
+                articleRepo.deleteArticles(listOf(articleId))
+            }
+        }
         adapter.setTheme(themeHolder.currentTheme)
         rootView.findViewById<RecyclerView>(R.id.recycler).adapter = adapter
         refreshNotifications()

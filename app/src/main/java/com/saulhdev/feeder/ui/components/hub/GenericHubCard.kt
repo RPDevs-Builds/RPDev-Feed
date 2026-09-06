@@ -19,12 +19,14 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -42,12 +44,17 @@ import com.saulhdev.feeder.plugins.models.HubAction
 import com.saulhdev.feeder.plugins.models.HubCardData
 import com.saulhdev.feeder.plugins.models.HubChip
 import com.saulhdev.feeder.plugins.models.HubTimelineItem
+import com.saulhdev.feeder.ui.icons.Phosphor
+import com.saulhdev.feeder.ui.icons.phosphor.DotsThreeVertical
+import com.saulhdev.feeder.ui.icons.phosphor.TrashSimple
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun GenericHubCard(
     cardData: HubCardData,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onMenuClick: (() -> Unit)? = null,
+    onDismiss: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
 
@@ -89,18 +96,57 @@ fun GenericHubCard(
                     }
                 }
 
-                cardData.badge?.let { badge ->
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer
-                    ) {
-                        Text(
-                            text = badge,
-                            style = MaterialTheme.typography.labelSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    cardData.badge?.let { badge ->
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer
+                        ) {
+                            Text(
+                                text = badge,
+                                style = MaterialTheme.typography.labelSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                            )
+                        }
+                    }
+
+                    if (onDismiss != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable { onDismiss() }
+                        ) {
+                            Icon(
+                                imageVector = Phosphor.TrashSimple,
+                                contentDescription = "Dismiss card",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(16.dp)
+                            )
+                        }
+                    }
+
+                    if (onMenuClick != null) {
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.surface.copy(alpha = 0.6f),
+                            modifier = Modifier.clickable { onMenuClick() }
+                        ) {
+                            Icon(
+                                imageVector = Phosphor.DotsThreeVertical,
+                                contentDescription = "Card options",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
+                                modifier = Modifier
+                                    .padding(6.dp)
+                                    .size(16.dp)
+                            )
+                        }
                     }
                 }
             }

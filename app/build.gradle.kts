@@ -29,8 +29,8 @@ android {
         applicationId = "iamrp.dev.feed"
         minSdk = 34
         targetSdk = 37
-        versionCode = 1200
-        versionName = "1.2.0-beta"
+        versionCode = 1201
+        versionName = "1.2.1-beta"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables.useSupportLibrary = true

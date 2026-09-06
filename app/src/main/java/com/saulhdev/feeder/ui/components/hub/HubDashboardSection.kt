@@ -8,13 +8,15 @@ package com.saulhdev.feeder.ui.components.hub
 
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
-import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -22,6 +24,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.SwipeToDismissBox
 import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
@@ -30,13 +33,17 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.saulhdev.feeder.R
 import com.saulhdev.feeder.plugins.HubPluginRegistry
 import com.saulhdev.feeder.plugins.models.HubCardData
 import com.saulhdev.feeder.ui.icons.Phosphor
@@ -64,27 +71,65 @@ fun HubDashboardSection(
         cards.filter { it.pluginId !in dismissedIds }
     }
 
-    if (visibleCards.isNotEmpty()) {
-        Column(
-            modifier = modifier
-                .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            verticalArrangement = Arrangement.spacedBy(6.dp)
-        ) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalArrangement = Arrangement.spacedBy(6.dp)
+    ) {
+        if (visibleCards.isNotEmpty()) {
             visibleCards.forEach { cardData ->
-                SwipeableHubCard(
-                    key = cardData.pluginId,
-                    cardData = cardData,
-                    onDismiss = {
-                        registry.dismissCard(cardData.pluginId)
+                key(cardData.pluginId) {
+                    SwipeableHubCard(
+                        key = cardData.pluginId,
+                        cardData = cardData,
+                        onDismiss = {
+                            registry.dismissCard(cardData.pluginId)
+                        }
+                    )
+                }
+            }
+        }
+
+        if (dismissedIds.isNotEmpty()) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 4.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(12.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                    modifier = Modifier.clickable {
+                        registry.restoreDismissedCards()
                     }
-                )
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        Icon(
+                            imageVector = Phosphor.ArrowCounterClockwise,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(14.dp)
+                        )
+                        Text(
+                            text = stringResource(R.string.dismissed_cards_restore, dismissedIds.size),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class, androidx.compose.foundation.ExperimentalFoundationApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SwipeableHubCard(
     key: String,
@@ -94,6 +139,7 @@ fun SwipeableHubCard(
     val context = LocalContext.current
     val registry = remember { HubPluginRegistry.getInstance(context) }
     val dismissState = rememberSwipeToDismissBoxState(
+        positionalThreshold = { totalDistance -> totalDistance * 0.25f },
         confirmValueChange = { dismissValue ->
             if (dismissValue == SwipeToDismissBoxValue.StartToEnd || dismissValue == SwipeToDismissBoxValue.EndToStart) {
                 onDismiss()
@@ -113,29 +159,59 @@ fun SwipeableHubCard(
     SwipeToDismissBox(
         state = dismissState,
         backgroundContent = {
+            val direction = dismissState.dismissDirection
+            val alignment = when (direction) {
+                SwipeToDismissBoxValue.StartToEnd -> Alignment.CenterStart
+                SwipeToDismissBoxValue.EndToStart -> Alignment.CenterEnd
+                else -> Alignment.Center
+            }
             Box(
                 modifier = Modifier
                     .fillMaxSize()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.25f))
-            )
+                    .background(MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.6f))
+                    .padding(horizontal = 20.dp),
+                contentAlignment = alignment
+            ) {
+                Icon(
+                    imageVector = Phosphor.TrashSimple,
+                    contentDescription = "Dismiss",
+                    tint = MaterialTheme.colorScheme.onErrorContainer
+                )
+            }
         },
         modifier = Modifier.fillMaxWidth()
     ) {
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .combinedClickable(
-                    onClick = {},
-                    onLongClick = { showMenu = true }
-                )
+            modifier = Modifier.fillMaxWidth()
         ) {
-            GenericHubCard(cardData = cardData)
+            GenericHubCard(
+                cardData = cardData,
+                onMenuClick = { showMenu = true },
+                onDismiss = onDismiss
+            )
 
             DropdownMenu(
                 expanded = showMenu,
                 onDismissRequest = { showMenu = false }
             ) {
+                DropdownMenuItem(
+                    text = { Text("Dismiss for Now") },
+                    leadingIcon = {
+                        Icon(
+                            imageVector = Phosphor.TrashSimple,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    onClick = {
+                        showMenu = false
+                        onDismiss()
+                    }
+                )
+
+                HorizontalDivider()
+
                 if (plugin != null && plugin.getConfigFields().isNotEmpty()) {
                     DropdownMenuItem(
                         text = { Text("Configure ${plugin.name}") },
@@ -191,23 +267,6 @@ fun SwipeableHubCard(
                     onClick = {
                         showMenu = false
                         registry.movePluginDown(cardData.pluginId)
-                    }
-                )
-
-                HorizontalDivider()
-
-                DropdownMenuItem(
-                    text = { Text("Dismiss for Now") },
-                    leadingIcon = {
-                        Icon(
-                            imageVector = Phosphor.TrashSimple,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.error
-                        )
-                    },
-                    onClick = {
-                        showMenu = false
-                        onDismiss()
                     }
                 )
             }

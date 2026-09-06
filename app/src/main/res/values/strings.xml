@@ -217,6 +217,8 @@
     <string name="menu_configure_module">Configure Module</string>
     <string name="menu_refresh_module">Refresh Module</string>
     <string name="menu_dismiss_module">Dismiss for Now</string>
+    <string name="menu_dismiss_story">Dismiss Story</string>
+    <string name="dismissed_cards_restore">%1$d cards dismissed • Tap to restore</string>
     <string name="menu_hub_settings">Hub Plugins &amp; Settings</string>
     <string name="link_copied_toast">Link copied to clipboard</string>
 </resources>

@@ -278,7 +278,7 @@ class HubPluginRegistry(private val context: Context) {
     }
 
     fun refreshCards(
-        clearDismissed: Boolean = true,
+        clearDismissed: Boolean = false,
         scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
     ) {
         if (clearDismissed) {

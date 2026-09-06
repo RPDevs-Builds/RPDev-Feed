@@ -96,10 +96,10 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload Standardized Release APK Artifact (v1.2-beta)
+      - name: Upload Standardized Release APK Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: RPDev-Feed-v1.2-beta
+          name: RPDev-Feed-${{ env.TAG_NAME }}
           path: |
             release-artifacts/RPDev-Feed-*.apk
             release-artifacts/RPDev-Feed-*.apk.sha256
