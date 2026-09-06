@@ -7,6 +7,12 @@ on:
   pull_request:
     branches: [ main ]
   workflow_dispatch:
+    inputs:
+      publish_release:
+        description: 'Publish GitHub Release'
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -47,7 +53,36 @@ jobs:
       - name: Compile Release APK
         run: ./gradlew assembleRelease --stacktrace
 
-      - name: Save name of our Artifact
+      - name: Prepare Standardized Release Artifacts
+        id: prep-artifacts
+        run: |
+          mkdir -p release-artifacts
+          RELEASE_APK=$(ls app/build/outputs/apk/release/RPDev_Feed_*.apk | head -n 1)
+          
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            TAG_NAME="${{ github.ref_name }}"
+          else
+            RAW_VER=$(basename "$RELEASE_APK" | sed -E 's/RPDev_Feed_(.*)_release\.apk/\1/')
+            CLEAN_VER=$(echo "$RAW_VER" | sed -E 's/^([0-9]+\.[0-9]+)\.0(-.+)?$/\1\2/')
+            TAG_NAME="v${CLEAN_VER}"
+          fi
+          
+          echo "Target tag: ${TAG_NAME}"
+          
+          cp "$RELEASE_APK" "release-artifacts/RPDev-Feed-${TAG_NAME}.apk"
+          cp "$RELEASE_APK" "release-artifacts/RPDev-Feed-v1.2-beta.apk"
+          cp "$RELEASE_APK" "release-artifacts/$(basename "$RELEASE_APK")"
+          
+          cd release-artifacts
+          for f in *.apk; do
+            sha256sum "$f" > "${f}.sha256"
+          done
+          cd ..
+          
+          echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+          echo "RELEASE_APK_NAME=$(basename $RELEASE_APK)" >> $GITHUB_ENV
+
+      - name: Save name of Debug Artifact
         id: set-result-artifact
         run: |
           ARTIFACT_PATHNAME_APK=$(ls app/build/outputs/apk/debug/*.apk | head -n 1)
@@ -64,19 +99,52 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+      - name: Upload Standardized Release APK Artifact (v1.2-beta)
+        uses: actions/upload-artifact@v7
+        with:
+          name: RPDev-Feed-v1.2-beta
+          path: |
+            release-artifacts/RPDev-Feed-*.apk
+            release-artifacts/RPDev-Feed-*.apk.sha256
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v7
         with:
           name: RPDev-Feed-Release-APK
-          path: app/build/outputs/apk/release/RPDev_Feed_*.apk
+          path: release-artifacts/*
           if-no-files-found: error
           retention-days: 14
 
-      - name: Publish GitHub Release (On Version Tags)
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true'
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/RPDev_Feed_*.apk
+          tag_name: ${{ env.TAG_NAME }}
+          files: release-artifacts/*
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Deploy to CDN (cdn.iamrp.dev)
+        if: startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_release == 'true'
+        env:
+          CDN_PAT: ${{ secrets.GH_PAT || secrets.GH_TOKEN }}
+        run: |
+          if [ -n "$CDN_PAT" ]; then
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git clone https://x-access-token:${CDN_PAT}@github.com/rpdev-cdn/cdn.iamrp.dev.git /tmp/cdn-repo
+            mkdir -p /tmp/cdn-repo/feed/releases
+            cp release-artifacts/RPDev-Feed-*.apk /tmp/cdn-repo/feed/releases/
+            cp release-artifacts/RPDev-Feed-*.apk.sha256 /tmp/cdn-repo/feed/releases/
+            cd /tmp/cdn-repo
+            git add feed/releases/
+            if ! git diff --cached --quiet; then
+              git commit -m "ci(feed): publish ${TAG_NAME} release artifacts"
+              git push origin main
+            fi
+          else
+            echo "No CDN_PAT configured; skipping automated CDN deployment."
+          fi
