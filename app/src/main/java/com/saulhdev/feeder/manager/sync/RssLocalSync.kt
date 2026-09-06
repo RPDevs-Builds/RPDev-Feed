@@ -55,14 +55,32 @@ import org.koin.java.KoinJavaComponent.inject
 import java.io.File
 import java.io.IOException
 import java.util.concurrent.Executors
+import java.net.InetAddress
+import java.net.URL
 import kotlin.system.measureTimeMillis
 import kotlin.time.Clock
 import kotlin.time.Instant
 
 val syncMutex = Mutex()
 val prefs: FeedPreferences by inject(FeedPreferences::class.java)
-val singleThreadedSync = Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+val sharedHttpClient: OkHttpClient by inject(OkHttpClient::class.java)
+val singleThreadedSync = Dispatchers.IO.limitedParallelism(1)
 const val TAG = "RssLocalSync"
+
+private fun isSsrfSafe(url: URL): Boolean {
+    val host = url.host?.lowercase() ?: return false
+    if (host == "localhost" || host.endsWith(".localhost") || host == "metadata.google.internal") {
+        return false
+    }
+    return try {
+        val addresses = InetAddress.getAllByName(host)
+        addresses.none { addr ->
+            addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isAnyLocalAddress
+        }
+    } catch (_: Exception) {
+        false
+    }
+}
 
 suspend fun syncFeeds(
     context: Context,
@@ -195,10 +213,13 @@ private suspend fun syncFeed(
         return
     }
 
-    val okHttpClient = OkHttpClient.Builder()
-        .build()
+    if (!isSsrfSafe(feedSql.url)) {
+        Log.w(TAG, "Blocked SSRF target feed '${feedSql.title}': ${feedSql.url}")
+        return
+    }
+
     val response: Response =
-        okHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)
+        sharedHttpClient.getResponse(url = feedSql.url, forceNetwork = forceNetwork)
     val feedParser = FeedParser()
     val feed: JsonFeed = response.use {
         response.body.let { responseBody ->

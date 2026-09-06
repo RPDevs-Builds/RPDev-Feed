@@ -141,7 +141,7 @@ fun requestFeedSync(
 
     workManager.enqueueUniqueWork(
         "feeder_sync_onetime_$feedId",
-        ExistingWorkPolicy.REPLACE,
+        ExistingWorkPolicy.KEEP,
         workRequest
     )
 }

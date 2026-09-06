@@ -8,7 +8,9 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.multidex.MultiDexApplication
 import androidx.work.WorkManager
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicInteger
+import okhttp3.OkHttpClient
 import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
@@ -90,6 +92,13 @@ class NeoApp : MultiDexApplication(), KoinStartup {
         }
         single { applicationCoroutineScope }
         single<NeoApp> { this@NeoApp }
+        single<OkHttpClient> {
+            OkHttpClient.Builder()
+                .connectTimeout(15, TimeUnit.SECONDS)
+                .readTimeout(15, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .build()
+        }
     }
 
     fun onAppStarted() {

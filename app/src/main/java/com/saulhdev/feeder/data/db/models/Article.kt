@@ -85,11 +85,9 @@ data class Article constructor(
         val converter = HtmlToPlainTextConverter()
         // Be careful about nulls.
         val text = entry.content_html ?: entry.content_text ?: ""
-        val description = (entry.summary ?: entry.content_text ?: converter.convert(text)).trim()
-        val summary: String = (
-                entry.summary ?: entry.content_text
-                ?: converter.convert(text)
-                ).take(200)
+        val rawContent = entry.summary ?: entry.content_text ?: text
+        val description = converter.convert(rawContent).trim()
+        val summary: String = description.take(200)
 
         // Make double sure no base64 images are used as thumbnails
         val safeImage = when {

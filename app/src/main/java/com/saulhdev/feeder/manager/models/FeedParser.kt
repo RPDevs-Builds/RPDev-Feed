@@ -122,7 +122,7 @@ class FeedParser {
                 element.hasAttr("href") && element.hasAttr("type")
             }
             .filter { element ->
-                val t = element.attr("type").lowercase(Locale.getDefault())
+                val t = element.attr("type").lowercase(Locale.ROOT)
                 when {
                     t.contains("application/atom") -> true
                     t.contains("application/rss") -> true
@@ -132,7 +132,7 @@ class FeedParser {
                 }
             }
             .filter { element ->
-                val l = element.attr("href").lowercase(Locale.getDefault())
+                val l = element.attr("href").lowercase(Locale.ROOT)
                 try {
                     if (baseUrl != null) {
                         relativeLinkIntoAbsoluteOrThrow(base = baseUrl, link = l)
@@ -245,6 +245,7 @@ class FeedParser {
                     SyndFeedInput()
                         .apply {
                             isPreserveWireFeed = true
+                            isAllowDoctypes = false
                         }
                         .build(it)
                 }
@@ -296,28 +297,11 @@ suspend fun OkHttpClient.getResponse(url: URL, forceNetwork: Boolean = false): R
         newBuilder()
             .authenticator { _, response ->
                 when {
-                    response.request.header("Authorization") != null -> {
-                        null
-                    }
-
-                    else -> {
-                        response.request.newBuilder()
-                            .header("Authorization", credentials)
-                            .build()
-                    }
-                }
-            }
-            .proxyAuthenticator { _, response ->
-                when {
-                    response.request.header("Proxy-Authorization") != null -> {
-                        null
-                    }
-
-                    else -> {
-                        response.request.newBuilder()
-                            .header("Proxy-Authorization", credentials)
-                            .build()
-                    }
+                    response.request.header("Authorization") != null -> null
+                    response.request.url.host != url.host -> null
+                    else -> response.request.newBuilder()
+                        .header("Authorization", credentials)
+                        .build()
                 }
             }
             .build()

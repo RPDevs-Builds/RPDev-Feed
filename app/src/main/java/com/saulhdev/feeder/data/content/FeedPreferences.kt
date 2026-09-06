@@ -59,7 +59,7 @@ import kotlin.math.roundToInt
 class FeedPreferences private constructor(val context: Context) : KoinComponent {
     private val dataStore: DataStore<Preferences> by inject()
     /* Theme */
-    var overlayTheme = StringSelectionPref(
+    val overlayTheme = StringSelectionPref(
         titleId = R.string.pref_ovr_theme,
         icon = Phosphor.PaintRoller,
         key = OVERLAY_THEME,
@@ -76,7 +76,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = true
     )
 
-    var overlayTransparency = FloatPref(
+    val overlayTransparency = FloatPref(
         titleId = R.string.pref_transparency,
         icon = Phosphor.SubtractSquare,
         key = OVERLAY_OPACITY,
@@ -88,7 +88,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         specialOutputs = { "${(it * 100).roundToInt()}%" }
     )
 
-    var openInBrowser = BooleanPref(
+    val openInBrowser = BooleanPref(
         titleId = R.string.pref_browser_theme,
         icon = Phosphor.Browser,
         key = OPEN_IN_BROWSER,
@@ -96,7 +96,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = false
     )
 
-    var removeDuplicates = BooleanPref(
+    val removeDuplicates = BooleanPref(
         titleId = R.string.pref_remove_duplicates,
         icon = Phosphor.FunnelSimple,
         key = REMOVE_DUPLICATES,
@@ -104,7 +104,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = true
     )
 
-    var offlineReader = BooleanPref(
+    val offlineReader = BooleanPref(
         titleId = R.string.pref_offline_reader,
         icon = Phosphor.BookBookmark,
         key = OFFLINE_READER,
@@ -113,7 +113,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /*SAVE UTILITY PREF*/
-    var showBookmarks = BooleanPref(
+    val showBookmarks = BooleanPref(
         titleId = R.string.title_bookmarks,
         icon = Phosphor.BookBookmark,
         key = SHOW_BOOKMARKS,
@@ -122,7 +122,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /* Sync */
-    var syncOnlyOnWifi = BooleanPref(
+    val syncOnlyOnWifi = BooleanPref(
         titleId = R.string.pref_sync_wifi,
         icon = Phosphor.WifiHigh,
         key = SYNC_ON_WIFI,
@@ -130,7 +130,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = true
     )
 
-    var syncFrequency = StringSelectionPref(
+    val syncFrequency = StringSelectionPref(
         titleId = R.string.pref_sync_frequency,
         icon = Phosphor.Clock,
         key = SYNC_FREQUENCY,
@@ -139,7 +139,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getSyncFrequency(context)
     )
 
-    var syncRange = StringSelectionPref(
+    val syncRange = StringSelectionPref(
         titleId = R.string.pref_sync_range,
         icon = Phosphor.Clock,
         key = SYNC_RANGE,
@@ -148,7 +148,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getSyncRange(context)
     )
 
-    var itemsPerFeed = StringSelectionPref(
+    val itemsPerFeed = StringSelectionPref(
         titleId = R.string.pref_items_per_feed,
         icon = Phosphor.Hash,
         key = ITEMS_PER_FEED,
@@ -157,7 +157,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getItemsPerFeed()
     )
 
-    var cachedLinksLimit = StringSelectionPref(
+    val cachedLinksLimit = StringSelectionPref(
         titleId = R.string.pref_cached_links_limit,
         summaryId = R.string.pref_cached_links_limit_summary,
         icon = Phosphor.BookBookmark,
@@ -167,7 +167,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = com.saulhdev.feeder.utils.getCachedLinksLimitOptions(context)
     )
 
-    var mastodonItemsPerFeed = StringSelectionPref(
+    val mastodonItemsPerFeed = StringSelectionPref(
         titleId = R.string.pref_mastodon_items_per_feed,
         icon = Phosphor.Hash,
         key = MASTODON_ITEMS_PER_FEED,
@@ -176,7 +176,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getMastodonItemsPerFeed()
     )
 
-    var blockedWords = StringSetPref(
+    val blockedWords = StringSetPref(
         titleId = R.string.pref_blocked_words,
         summaryId = R.string.pref_blocked_words_summary,
         icon = Phosphor.Hash,
@@ -187,7 +187,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /* Display & Hub */
-    var articleDisplayMode = StringSelectionPref(
+    val articleDisplayMode = StringSelectionPref(
         titleId = R.string.pref_article_display_mode,
         summaryId = R.string.pref_article_display_mode_summary,
         icon = Phosphor.Browser,
@@ -197,7 +197,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = com.saulhdev.feeder.utils.getArticleDisplayModes(context)
     )
 
-    var hubPlacement = StringSelectionPref(
+    val hubPlacement = StringSelectionPref(
         titleId = R.string.pref_hub_placement,
         summaryId = R.string.pref_hub_placement_summary,
         icon = Phosphor.Swatches,
@@ -207,7 +207,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = com.saulhdev.feeder.utils.getHubPlacementOptions(context)
     )
 
-    var hubPluginsNav = StringPref(
+    val hubPluginsNav = StringPref(
         titleId = R.string.pref_hub_plugins,
         summaryId = R.string.pref_hub_plugins_summary,
         icon = Phosphor.Hash,
@@ -217,7 +217,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /* Others */
-    var enabledPlugins = StringSetPref(
+    val enabledPlugins = StringSetPref(
         titleId = R.string.title_plugin_list,
         icon = Phosphor.Hash,
         key = PLUGINS,
@@ -225,7 +225,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = setOf()
     )
 
-    var about = StringPref(
+    val about = StringPref(
         titleId = R.string.title_about,
         icon = Phosphor.Info,
         key = ABOUT,
@@ -233,7 +233,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         route = NavRoute.About
     )
 
-    var debugging = BooleanPref(
+    val debugging = BooleanPref(
         titleId = R.string.debug_logcat_printing,
         defaultValue = false,
         icon = Phosphor.Bug,
@@ -242,7 +242,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
     )
 
     /* Sort & Filter */
-    var sourcesFilter = StringSetPref(
+    val sourcesFilter = StringSetPref(
         titleId = R.string.title_sources,
         icon = Phosphor.Info,
         key = FILTER_SOURCES,
@@ -250,7 +250,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = emptySet(),
     )
 
-    var tagsFilter = StringSetPref(
+    val tagsFilter = StringSetPref(
         titleId = R.string.source_tags,
         icon = Phosphor.Info,
         key = FILTER_TAGS,
@@ -258,7 +258,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         defaultValue = emptySet(),
     )
 
-    var sortingFilter = StringSelectionPref(
+    val sortingFilter = StringSelectionPref(
         titleId = R.string.sorting_order,
         icon = Phosphor.Info,
         key = FILTER_SORT,
@@ -267,7 +267,7 @@ class FeedPreferences private constructor(val context: Context) : KoinComponent 
         entries = getSortingOptions(context),
     )
 
-    var sortingAsc = BooleanPref(
+    val sortingAsc = BooleanPref(
         titleId = R.string.sorting_order,
         defaultValue = false,
         icon = Phosphor.CaretUp,

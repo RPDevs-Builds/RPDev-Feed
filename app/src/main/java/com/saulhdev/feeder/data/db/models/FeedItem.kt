@@ -26,7 +26,7 @@ data class FeedItem(
             source = FeedCategory(
                 sourceId,
                 feedTitle,
-                Color.GREEN,
+                Color.TRANSPARENT,
                 feed.feedImage.toString()
             )
         )

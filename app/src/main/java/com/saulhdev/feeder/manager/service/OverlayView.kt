@@ -170,10 +170,11 @@ class OverlayView(val context: Context) :
         NeoApp.bridge.setCallback(this)
 
         val filter = IntentFilter(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
+        val closePerm = "android.permission.BROADCAST_CLOSE_SYSTEM_DIALOGS"
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            context.registerReceiver(closeSystemDialogsReceiver, filter, Context.RECEIVER_EXPORTED)
+            context.registerReceiver(closeSystemDialogsReceiver, filter, closePerm, null, Context.RECEIVER_EXPORTED)
         } else {
-            context.registerReceiver(closeSystemDialogsReceiver, filter)
+            context.registerReceiver(closeSystemDialogsReceiver, filter, closePerm, null)
         }
     }
 
@@ -500,6 +501,10 @@ class OverlayView(val context: Context) :
         bookmarkCollectorJob?.cancel()
         articleCollectorJob?.cancel()
         AbstractFloatingView.container = null
+        try {
+            savedStateRegistryController.performSave(Bundle())
+        } catch (_: Exception) {
+        }
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         _viewModelStore.clear()
         super.onDestroy()
