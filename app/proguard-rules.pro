@@ -71,13 +71,13 @@
 # ===== Moshi Reflection / JSON Feed (P1-08) =====
 -keep class com.saulhdev.feeder.data.entity.** { *; }
 
-# ===== kotlinx.serialization for data.entity (P1-09) =====
--keep,includedescriptorclasses class com.saulhdev.feeder.data.entity.**$$serializer { *; }
--keepclassmembers class com.saulhdev.feeder.data.entity.** {
+# ===== kotlinx.serialization (Strategic Rec 3 & P1-09) =====
+-keep,includedescriptorclasses class com.saulhdev.feeder.**$$serializer { *; }
+-keepclassmembers class com.saulhdev.feeder.** {
     *** Companion;
     *** serializer(...);
     kotlinx.serialization.KSerializer serializer(...);
 }
--keepclasseswithmembers class com.saulhdev.feeder.data.entity.** {
+-keepclasseswithmembers class com.saulhdev.feeder.** {
     kotlinx.serialization.KSerializer serializer(...);
 }
