@@ -1,6 +1,29 @@
 CHANGELOG
 =========
 
+1.2.1 (06.09.2026) - Production GA & Comprehensive Security Hardening
+------------
+
+### Security & SSRF Protection
+- Fix: Hardened `isSsrfSafe()` in `RssLocalSync.kt` against SSRF attacks by blocking all RFC-1918 private subnets (`isSiteLocalAddress`), loopback addresses (`isLoopbackAddress`), link-local interfaces (`isLinkLocalAddress`), wildcard addresses (`isAnyLocalAddress`), `localhost`, and cloud metadata services (`metadata.google.internal`).
+- Fix: Protected XML feed parsing against XML External Entity (XXE) injection attacks in Rome parser by strictly disabling DOCTYPE declarations (`disallow-doctype-decl = true`), external general entities, and external parameter entities.
+- Fix: Enforced signature-level permissions (`android:protectionLevel="signature"`) on `FeedCardPushReceiver` to prevent unauthorized cross-application broadcast card injection.
+- Fix: Added strict URL scheme validation (`https://` and `http://`) to reject malicious pseudo-schemes (`javascript:`, `file:`, `content:`, `intent:`) on inbound push cards.
+- Fix: Capped remote streaming responses at 2MB across all feed parsers and HTTP fetchers to prevent OOM denial-of-service.
+
+### Concurrency, Memory & Lifecycle
+- Fix: Replaced unbounded coroutine collection in `OverlayView.kt` with lifecycle-aware window detachment cleanup (`onDetachedFromWindow`), eliminating background worker accumulation.
+- Fix: Eradicated static overlay container reference leak by converting `overlayContainer` to a lifecycle-managed, weak/nullable reference cleared on window detachment.
+- Fix: Implemented thread-safe `ActivityHandler` in `NeoApp.kt` using `ConcurrentHashMap` and thread-safe dynamic reflection for lifecycle callback tracking.
+- Fix: Resolved `NeoApp` ViewModel factory crash by integrating `SavedStateHandle` directly into factory parameters.
+- Fix: Hardened `BasePreferences.kt` with a non-blocking in-memory cache to eliminate UI thread ANR lock contention on SharedPreferences reads.
+- Fix: Hardened `LauncherPrefs` listeners with strong GC retention preventing premature garbage collection of preference change listeners.
+
+### Networking & Performance
+- Fix: Eliminated blocking DNS resolution in `Feed.kt` domain equality check by migrating from `java.net.URL.equals()` to URI host string matching.
+- Fix: Centralized `OkHttpClient` dependency injection across all sync and plugin components with shared connection pooling and Keep-Alive management.
+- Fix: Hardened R8 ProGuard keep rules for Moshi reflection entities (`data.entity.**`) and Kotlinx serialization companions (`com.saulhdev.feeder.**$$serializer`), guaranteeing zero crashes in obfuscated release builds.
+
 1.1.0 (03.09.2026) - Modular Plugin System & GitHub Pulse Hub Engine
 ------------
 

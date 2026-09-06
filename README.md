@@ -10,7 +10,7 @@
 
 [![Project Wiki](https://img.shields.io/badge/Wiki-wiki.iamrp.dev-6366f1?style=flat&logo=bookstack&logoColor=white)](https://wiki.iamrp.dev/projects/rpdev-feed)
 [![Documentation](https://img.shields.io/badge/Docs-feed.launcher.iamrp.dev-0ea5e9?style=flat&logo=gitbook&logoColor=white)](https://feed.launcher.iamrp.dev)
-[![Module Catalog](https://img.shields.io/badge/Catalog-repo.launcher.iamrp.dev-10b981?style=flat&logo=buffer&logoColor=white)](https://repo.launcher.iamrp.dev)
+[![Module Catalog](https://img.shields.io/badge/Catalog-launcher.repo.iamrp.dev-10b981?style=flat&logo=buffer&logoColor=white)](https://launcher.repo.iamrp.dev)
 [![Latest Release](https://img.shields.io/github/v/release/RPDevs-Builds/RPDev-Feed?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/releases/latest)
 [![Build Status](https://img.shields.io/github/actions/workflow/status/RPDevs-Builds/RPDev-Feed/android.yml?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/actions/workflows/android.yml)
 [![GitHub License](https://img.shields.io/github/license/RPDevs-Builds/RPDev-Feed?style=flat&labelColor=1a1a2e&color=4e54c8)](https://github.com/RPDevs-Builds/RPDev-Feed/blob/main/LICENSE)
