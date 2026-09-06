@@ -69,18 +69,15 @@ jobs:
           
           echo "Target tag: ${TAG_NAME}"
           
-          cp "$RELEASE_APK" "release-artifacts/RPDev-Feed-${TAG_NAME}.apk"
-          cp "$RELEASE_APK" "release-artifacts/RPDev-Feed-v1.2-beta.apk"
-          cp "$RELEASE_APK" "release-artifacts/$(basename "$RELEASE_APK")"
+          STANDARDIZED_APK="RPDev-Feed-${TAG_NAME}.apk"
+          cp "$RELEASE_APK" "release-artifacts/${STANDARDIZED_APK}"
           
           cd release-artifacts
-          for f in *.apk; do
-            sha256sum "$f" > "${f}.sha256"
-          done
+          sha256sum "${STANDARDIZED_APK}" > "${STANDARDIZED_APK}.sha256"
           cd ..
           
           echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
-          echo "RELEASE_APK_NAME=$(basename $RELEASE_APK)" >> $GITHUB_ENV
+          echo "STANDARDIZED_APK=${STANDARDIZED_APK}" >> $GITHUB_ENV
 
       - name: Save name of Debug Artifact
         id: set-result-artifact
