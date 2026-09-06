@@ -60,4 +60,50 @@ data class Feed(
     val excludeReplies: Boolean = true,
     @ColumnInfo(defaultValue = "")
     val preferredPackage: String = "",
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Feed
+
+        if (id != other.id) return false
+        if (title != other.title) return false
+        if (description != other.description) return false
+        if (url.toExternalForm() != other.url.toExternalForm()) return false
+        if (feedImage.toExternalForm() != other.feedImage.toExternalForm()) return false
+        if (lastSync != other.lastSync) return false
+        if (alternateId != other.alternateId) return false
+        if (fullTextByDefault != other.fullTextByDefault) return false
+        if (tag != other.tag) return false
+        if (currentlySyncing != other.currentlySyncing) return false
+        if (isEnabled != other.isEnabled) return false
+        if (sourceType != other.sourceType) return false
+        if (requireLink != other.requireLink) return false
+        if (requireImage != other.requireImage) return false
+        if (excludeReplies != other.excludeReplies) return false
+        if (preferredPackage != other.preferredPackage) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = id.hashCode()
+        result = 31 * result + title.hashCode()
+        result = 31 * result + description.hashCode()
+        result = 31 * result + url.toExternalForm().hashCode()
+        result = 31 * result + feedImage.toExternalForm().hashCode()
+        result = 31 * result + lastSync.hashCode()
+        result = 31 * result + alternateId.hashCode()
+        result = 31 * result + fullTextByDefault.hashCode()
+        result = 31 * result + tag.hashCode()
+        result = 31 * result + currentlySyncing.hashCode()
+        result = 31 * result + isEnabled.hashCode()
+        result = 31 * result + sourceType.hashCode()
+        result = 31 * result + requireLink.hashCode()
+        result = 31 * result + requireImage.hashCode()
+        result = 31 * result + excludeReplies.hashCode()
+        result = 31 * result + preferredPackage.hashCode()
+        return result
+    }
+}

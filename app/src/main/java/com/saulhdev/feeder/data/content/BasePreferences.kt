@@ -23,10 +23,13 @@ import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import com.saulhdev.feeder.ui.navigation.NavRoute
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
@@ -92,26 +95,36 @@ abstract class PrefDelegate<T>(
     private val key: Preferences.Key<T>,
     private val defaultValue: T
 ) : ReadWriteProperty<Any?, T> {
-    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
-        return runBlocking(Dispatchers.IO) {
-            get().firstOrNull() ?: defaultValue
+
+    @Volatile
+    private var cachedValue: T = defaultValue
+    private var initialized = false
+
+    init {
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            dataStore.data.map { it[key] ?: defaultValue }.collect { value ->
+                cachedValue = value
+                initialized = true
+            }
         }
     }
 
-    fun getValue(): T {
-        return runBlocking(Dispatchers.IO) {
-            get().firstOrNull() ?: defaultValue
-        }
+    override fun getValue(thisRef: Any?, property: KProperty<*>): T {
+        return if (initialized) cachedValue else defaultValue
     }
+
+    fun getValue(): T = if (initialized) cachedValue else defaultValue
 
     override operator fun setValue(thisRef: Any?, property: KProperty<*>, value: T) {
-        return runBlocking(Dispatchers.IO) {
+        cachedValue = value
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             set(value)
         }
     }
 
     fun setValue(value: T) {
-        return runBlocking(Dispatchers.IO) {
+        cachedValue = value
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             set(value)
         }
     }

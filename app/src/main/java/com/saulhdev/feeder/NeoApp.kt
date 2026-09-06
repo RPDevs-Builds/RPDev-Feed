@@ -7,6 +7,8 @@ import android.widget.Toast
 import androidx.lifecycle.SavedStateHandle
 import androidx.multidex.MultiDexApplication
 import androidx.work.WorkManager
+import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicInteger
 import com.google.android.material.color.DynamicColors
 import com.jakewharton.threetenabp.AndroidThreeTen
 import com.saulhdev.feeder.data.content.FeedPreferences.Companion.prefsModule
@@ -48,12 +50,8 @@ class NeoApp : MultiDexApplication(), KoinStartup {
     private val applicationCoroutineScope = ApplicationCoroutineScope()
     private val wm: WorkManager by inject(WorkManager::class.java)
 
-    private fun savedStateHandle() = SavedStateHandle()
-
     private val modelModule = module {
-        single {
-            savedStateHandle()
-        }
+        factory { SavedStateHandle() }
         viewModelOf(::SourceEditViewModel)
         viewModelOf(::SearchFeedViewModel)
         viewModelOf(::ArticleListViewModel)
@@ -152,17 +150,20 @@ class NeoApp : MultiDexApplication(), KoinStartup {
 }
 
 class ActivityHandler : ActivityLifecycleCallbacks {
-    val activities = HashSet<Activity>()
-    var foregroundActivity: Activity? = null
-    private var startedActivities = 0
+    val activities: MutableSet<Activity> = ConcurrentHashMap.newKeySet()
 
+    @Volatile
+    var foregroundActivity: Activity? = null
+        private set
+
+    private val startedCount = AtomicInteger(0)
 
     fun finishAll(recreateApp: Boolean = true) {
-        HashSet(activities).forEach { if (recreateApp) it.recreate() else it.finish() }
+        ArrayList(activities).forEach { if (recreateApp) it.recreate() else it.finish() }
     }
 
     override fun onActivityPaused(activity: Activity) {
-        if (activity == foregroundActivity) {
+        if (foregroundActivity === activity) {
             foregroundActivity = null
         }
     }
@@ -172,20 +173,20 @@ class ActivityHandler : ActivityLifecycleCallbacks {
     }
 
     override fun onActivityStarted(activity: Activity) {
-        startedActivities += 1
+        startedCount.incrementAndGet()
     }
 
     override fun onActivityDestroyed(activity: Activity) {
-        if (activity == foregroundActivity)
+        if (foregroundActivity === activity) {
             foregroundActivity = null
+        }
         activities.remove(activity)
     }
 
-    override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {
-    }
+    override fun onActivitySaveInstanceState(p0: Activity, p1: Bundle) {}
 
     override fun onActivityStopped(activity: Activity) {
-        startedActivities = (startedActivities - 1).coerceAtLeast(0)
+        startedCount.decrementAndGet().coerceAtLeast(0)
     }
 
     override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {

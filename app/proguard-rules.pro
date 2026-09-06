@@ -67,3 +67,17 @@
 -keep class com.saulhdev.feeder.plugins.models.HubAction { *; }
 -keep class com.saulhdev.feeder.plugins.CatalogModule { *; }
 -keep class com.saulhdev.feeder.plugins.PluginConfigField { *; }
+
+# ===== Moshi Reflection / JSON Feed (P1-08) =====
+-keep class com.saulhdev.feeder.data.entity.** { *; }
+
+# ===== kotlinx.serialization for data.entity (P1-09) =====
+-keep,includedescriptorclasses class com.saulhdev.feeder.data.entity.**$$serializer { *; }
+-keepclassmembers class com.saulhdev.feeder.data.entity.** {
+    *** Companion;
+    *** serializer(...);
+    kotlinx.serialization.KSerializer serializer(...);
+}
+-keepclasseswithmembers class com.saulhdev.feeder.data.entity.** {
+    kotlinx.serialization.KSerializer serializer(...);
+}

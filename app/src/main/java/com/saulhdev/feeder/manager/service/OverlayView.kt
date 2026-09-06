@@ -65,6 +65,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
+import kotlinx.coroutines.withContext
 import org.koin.core.component.KoinComponent
 import org.koin.core.component.inject
 import org.koin.java.KoinJavaComponent.inject
@@ -87,6 +88,7 @@ class OverlayView(val context: Context) :
     private val syncScope = CoroutineScope(SupervisorJob() + Dispatchers.IO + CoroutineName("NeoFeedSync"))
     private val mainScope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var bookmarkCollectorJob: Job? = null
+    private var articleCollectorJob: Job? = null
     private val viewModel: ArticleListViewModel by inject(ArticleListViewModel::class.java)
     private val articles: SyncRestClient by inject(SyncRestClient::class.java)
     private val articleRepo: ArticleRepository by inject(ArticleRepository::class.java)
@@ -147,20 +149,20 @@ class OverlayView(val context: Context) :
         initHeader()
         refreshNotifications()
 
-        syncScope.launch {
-            viewModel.articleListState.collect {
-                mainScope.launch {
-                    adapter.replace(it.articles)
-                    mainScope.launch {
-                        rootView.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh).isRefreshing =
-                            it.isSyncing
+        articleCollectorJob = syncScope.launch {
+            viewModel.articleListState.collect { state ->
+                withContext(Dispatchers.Main) {
+                    if (!bookmarkVisible) {
+                        adapter.replace(state.articles)
                     }
+                    rootView.findViewById<SwipeRefreshLayout>(R.id.swipe_to_refresh).isRefreshing =
+                        state.isSyncing
                 }
             }
         }
         syncScope.launch {
             prefs.overlayTheme.get().collect {
-                mainScope.launch {
+                withContext(Dispatchers.Main) {
                     applyNewTheme(it)
                 }
             }
@@ -422,23 +424,20 @@ class OverlayView(val context: Context) :
         updateToggleColor(toggleButton, bookmarkVisible)
         toggleButton.setOnClickListener {
             bookmarkCollectorJob?.cancel()
-            bookmarkCollectorJob = mainScope.launch {
-                if (bookmarkVisible) {
-                    bookmarkVisible = false
-                    toggleButton.isChecked = bookmarkVisible
-                    updateToggleColor(toggleButton, bookmarkVisible)
-                    viewModel.articleListState.collect {
-                        adapter.replace(it.articles)
-                        adapter.notifyDataSetChanged()
-                    }
-                } else {
-                    bookmarkVisible = true
-                    toggleButton.isChecked = bookmarkVisible
-                    updateToggleColor(toggleButton, bookmarkVisible)
+            bookmarkVisible = !bookmarkVisible
+            toggleButton.isChecked = bookmarkVisible
+            updateToggleColor(toggleButton, bookmarkVisible)
+
+            if (bookmarkVisible) {
+                bookmarkCollectorJob = mainScope.launch {
                     viewModel.bookmarksState.collect {
                         adapter.replace(it.bookmarkedArticles)
-                        adapter.notifyDataSetChanged()
                     }
+                }
+            } else {
+                bookmarkCollectorJob = mainScope.launch {
+                    val currentState = viewModel.articleListState.value
+                    adapter.replace(currentState.articles)
                 }
             }
         }
@@ -499,6 +498,8 @@ class OverlayView(val context: Context) :
         syncScope.cancel()
         mainScope.cancel()
         bookmarkCollectorJob?.cancel()
+        articleCollectorJob?.cancel()
+        AbstractFloatingView.container = null
         lifecycleRegistry.handleLifecycleEvent(Lifecycle.Event.ON_DESTROY)
         _viewModelStore.clear()
         super.onDestroy()
