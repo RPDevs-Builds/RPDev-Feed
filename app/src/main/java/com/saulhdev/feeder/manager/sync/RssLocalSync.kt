@@ -75,7 +75,7 @@ private fun isSsrfSafe(url: URL): Boolean {
     return try {
         val addresses = InetAddress.getAllByName(host)
         addresses.none { addr ->
-            addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isAnyLocalAddress
+            addr.isLoopbackAddress || addr.isLinkLocalAddress || addr.isAnyLocalAddress || addr.isSiteLocalAddress
         }
     } catch (_: Exception) {
         false
